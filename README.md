@@ -4,10 +4,10 @@ Aprende a construir aplicaciones con IA usando el [Vercel AI SDK](https://ai-sdk
 
 ## Ejercicios
 
-| Branch | Descripción |
-|--------|-------------|
+| Branch                           | Descripción          |
+| -------------------------------- | -------------------- |
 | `ejercicio/01-streaming-vanilla` | Express + vanilla JS |
-| `ejercicio/02-react-usechat` | React + useChat |
+| `ejercicio/02-react-usechat`     | React + useChat      |
 
 ## Instalación
 
@@ -40,4 +40,4 @@ npm run dev
 
 ## Autor
 
-[Blissmo](https://github.com/blissito)
+[blissito at Fixtergeek](https://github.com/blissito)
