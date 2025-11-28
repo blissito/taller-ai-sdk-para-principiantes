@@ -8,9 +8,8 @@ app.use(express.json());
 
 app.post("/api/chat", async (req, res) => {
   const { messages } = req.body;
-  const lastMessage = messages[messages.length - 1].content;
-  const result = chat(lastMessage);
-  result.pipeTextStreamToResponse(res);
+  const result = chat(messages);
+  result.pipeUIMessageStreamToResponse(res);
 });
 
 app.listen(PORT, () => {
