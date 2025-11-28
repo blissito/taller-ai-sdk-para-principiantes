@@ -4,7 +4,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server.ts"
+    "dev:server": "tsx watch server.ts",
+    "dev:client": "npm run dev --prefix client"
   },
   "keywords": [],
   "author": "",

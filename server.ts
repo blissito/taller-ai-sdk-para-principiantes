@@ -4,10 +4,12 @@ import { chat } from ".";
 const PORT = process.env.PORT || 3000;
 const app = express();
 
-app.use(express.static("public")); // home page
+app.use(express.json());
 
-app.get("/chat", async (_, res) => {
-  const result = chat("crea un poema sobre robots");
+app.post("/api/chat", async (req, res) => {
+  const { messages } = req.body;
+  const lastMessage = messages[messages.length - 1].content;
+  const result = chat(lastMessage);
   result.pipeTextStreamToResponse(res);
 });
 
