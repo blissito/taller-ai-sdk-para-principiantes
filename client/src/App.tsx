@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Streamdown } from "streamdown";
+import { cn } from "./lib/utils";
 
-type FileContext = {
+type EmbeddedFile = {
   name: string;
-  content: string;
+  chunksCount: number;
+  status: "loading" | "ready" | "error";
 };
 
 function PaperclipIcon({ className }: { className?: string }) {
@@ -71,73 +73,119 @@ function stripContextTags(text: string): string {
 
 export default function App() {
   const [input, setInput] = useState("");
-  const [fileContexts, setFileContexts] = useState<FileContext[]>([]);
+  const [embeddedFiles, setEmbeddedFiles] = useState<EmbeddedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Generar sessionId único para esta sesión
+  const sessionId = useMemo(() => crypto.randomUUID(), []);
+
   const { messages, sendMessage } = useChat();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() && fileContexts.length === 0) return;
-
-    // Build the message with file context
-    const contextText =
-      fileContexts.length > 0
-        ? fileContexts
-            .map((f) => `<context file="${f.name}">\n${f.content}\n</context>`)
-            .join("\n\n")
-        : "";
-
-    const fullText = contextText ? `${contextText}\n\n---\n\n${input}` : input;
+    if (!input.trim()) return;
 
     console.log("=== DEBUG ===");
-    console.log("fileContexts:", fileContexts.length, "archivos");
-    console.log("contextText length:", contextText.length);
-    console.log("fullText:", fullText.substring(0, 500) + "...");
+    console.log("sessionId:", sessionId);
+    console.log("embeddedFiles:", embeddedFiles.length, "archivos");
+    console.log("input:", input);
     console.log("=============");
-    sendMessage({ text: fullText });
+
+    sendMessage({ text: input }, { body: { sessionId } });
     setInput("");
-    // Mantenemos fileContexts para que persista entre mensajes
   };
 
   const handleFileChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files) return;
 
-      const newContexts = await Promise.all(
-        Array.from(e.target.files).map(async (file) => ({
-          name: file.name,
-          content: await readFileContent(file),
-        }))
-      );
+      for (const file of Array.from(e.target.files)) {
+        // Agregar archivo con estado "loading"
+        setEmbeddedFiles((prev) => [
+          ...prev,
+          { name: file.name, chunksCount: 0, status: "loading" },
+        ]);
 
-      setFileContexts((prev) => [...prev, ...newContexts]);
+        try {
+          const content = await readFileContent(file);
+
+          // Enviar al backend para crear embeddings
+          const response = await fetch("/api/embed", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              content,
+              filename: file.name,
+              sessionId,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            // Actualizar estado a "ready"
+            setEmbeddedFiles((prev) =>
+              prev.map((f) =>
+                f.name === file.name
+                  ? { ...f, chunksCount: data.chunksCount, status: "ready" }
+                  : f
+              )
+            );
+            console.log(`Embeddings creados: ${data.chunksCount} chunks`);
+          } else {
+            throw new Error(data.error);
+          }
+        } catch (error) {
+          console.error("Error creando embeddings:", error);
+          setEmbeddedFiles((prev) =>
+            prev.map((f) =>
+              f.name === file.name ? { ...f, status: "error" } : f
+            )
+          );
+        }
+      }
+
       e.target.value = "";
     },
-    []
+    [sessionId]
   );
 
   const removeFile = (index: number) => {
-    setFileContexts((prev) => prev.filter((_, i) => i !== index));
+    setEmbeddedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
+  useEffect(() => {
+    console.log("EmbeddedFiles: ", embeddedFiles);
+  }, [embeddedFiles]);
+
   return (
-    <main className="max-w-2xl mx-auto p-8 font-sans">
+    <article className="max-w-2xl mx-auto p-8 font-sans relative max-h-[97vh] ">
       <h1 className="text-2xl font-bold mb-6">Nuevo Curso: AI-SDK con React</h1>
 
       <section>
-        {fileContexts.length > 0 && (
-          <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg">
-            {fileContexts.map((file, i) => (
+        {embeddedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg mb-4">
+            {embeddedFiles.map((file, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm"
+                className={`flex items-center gap-2 px-3 py-1.5 border rounded-full text-sm ${
+                  file.status === "loading"
+                    ? "bg-yellow-50 border-yellow-200"
+                    : file.status === "error"
+                    ? "bg-red-50 border-red-200"
+                    : "bg-green-50 border-green-200"
+                }`}
               >
                 <span className="truncate max-w-[250px]">
-                  <strong>Contexto: </strong>
+                  {file.status === "loading" && "Procesando... "}
+                  {file.status === "error" && "Error: "}
+                  {file.status === "ready" && "Embeddings: "}
                   {file.name}
-                  <span className="text-gray-400 ml-1">
-                    ({file.content.length} chars)
-                  </span>
+                  {file.status === "ready" && (
+                    <span className="text-gray-500 ml-1">
+                      ({file.chunksCount} chunks)
+                    </span>
+                  )}
                 </span>
                 <button
                   type="button"
@@ -152,7 +200,7 @@ export default function App() {
         )}
       </section>
 
-      <div className="space-y-4 mb-6">
+      <main className="space-y-4 mb-6 min-h-[800px] pb-[40px]">
         {messages.map((m) => (
           <div key={m.id}>
             <strong className="text-sm text-gray-600">{m.role}:</strong>
@@ -165,9 +213,17 @@ export default function App() {
             })}
           </div>
         ))}
-      </div>
+      </main>
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form
+        onSubmit={handleSubmit}
+        className={cn("space-y-3 flex flex-col justify-end ", {
+          "bg-white": true,
+          absolute: true,
+          "bottom-[40px] left-0 right-0": true,
+          "p-4 rounded-3xl": true,
+        })}
+      >
         <div className="flex items-center gap-2">
           <input
             type="file"
@@ -193,6 +249,6 @@ export default function App() {
           />
         </div>
       </form>
-    </main>
+    </article>
   );
 }
