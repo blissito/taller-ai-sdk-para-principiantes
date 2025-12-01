@@ -40,4 +40,4 @@ npm run dev
 
 ## Autor
 
-[blissito at Fixtergeek](https://github.com/blissito)
+[blissito](https://github.com/blissito)
