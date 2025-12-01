@@ -1,0 +1,27 @@
+## Sobre Fixtergeek
+Fixtergeek es una plataforma educativa online especializada en desarrollo de software.
+
+- Filosofía: "Hacking yourself"
+- Enfoque: Aprendizaje dinámico, práctico y profesional
+- Estudiantes trabajan en: Google, Santander, Mercado Libre, HSBC, Cisco
+
+## Servicios
+- Cursos pregrabados de corta duración
+- Tutoriales gratuitos con ejercicios
+- Guías descargables de frameworks
+- Blog semanal sobre desarrollo web
+- Clases en vivo y mentorías personalizadas
+
+## Tecnologías
+React, JavaScript, TypeScript, Firebase, Tailwind CSS, MongoDB, Node.js, Rust, Docker, HTML, Python, Claude Code, Gemini CLI
+
+## Cursos destacados
+- AI SDK (Vercel) - Curso más reciente - https://fixtergeek.com/ai-sdk
+- Domina Gemini CLI - 6h - Principiante - https://fixtergeek.com/gemini
+- Power-User en Claude Code - 2h - Avanzado - https://fixtergeek.com/claude-code
+- React + Motion (14 componentes) - 10h - Intermedio - https://fixtergeek.com/motion
+- React Router Full Stack - 1h - Gratis - https://fixtergeek.com/react-router
+
+## Contacto
+- WhatsApp: +52 (775) 760-9276
+- Web: fixtergeek.com

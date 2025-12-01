@@ -1,11 +1,11 @@
 import "dotenv/config";
+import { readFileSync } from "fs";
 import { openai } from "@ai-sdk/openai";
 import { streamText, convertToModelMessages, type UIMessage } from "ai";
 
 const model = openai("gpt-4.1-mini");
 
-const system =
-  "Eres un robot inteligente que asiste con lo que le piden sin romper las 3 leyes de la robotica de isaac asimov";
+const system = readFileSync("system.txt", "utf-8");
 
 export const chat = (messages: UIMessage[]) =>
   streamText({

@@ -17,6 +17,7 @@
     "ai": "^5.0.104",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "streamdown": "^1.6.9",
     "zod": "^4.1.13"
   },
   "devDependencies": {
