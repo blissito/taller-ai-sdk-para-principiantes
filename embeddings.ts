@@ -17,7 +17,7 @@ const embeddingStore: Map<string, EmbeddedChunk[]> = new Map();
 export async function embedChunks(chunks: Chunk[]): Promise<EmbeddedChunk[]> {
   const { embeddings } = await embedMany({
     model: embeddingModel,
-    values: chunks.map((c) => c.content),
+    values: chunks.map((c) => c.content), // Entrar a content es importante 🦾
   });
 
   return chunks.map((chunk, i) => ({

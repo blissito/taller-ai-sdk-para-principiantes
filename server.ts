@@ -66,6 +66,8 @@ app.post("/api/search", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { messages, sessionId } = req.body;
 
+  // @TODO Save the conversation 🤓 and use "originalMessages" from AI SDK
+
   // Si hay sessionId, buscar contexto relevante
   let contextChunks: string[] = [];
   if (sessionId && messages.length > 0) {
@@ -85,7 +87,7 @@ app.post("/api/chat", async (req, res) => {
     }
   }
 
-  const result = chat(messages, contextChunks);
+  const result = chat(messages, contextChunks); // RAG
   result.pipeUIMessageStreamToResponse(res);
 });
 
