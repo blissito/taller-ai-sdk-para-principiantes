@@ -26,3 +26,9 @@ Vamos a poner esta información en un archivo aparte para crear un sistema RAG c
 ## Herramientas usadas en este ejemplo
 
 Instalado en esta branch encontrarás a streamdown.ai lo usamos para renderizar correctamente el markdown natural de la respuesta del LLM. 🤩
+
+## Alcance del ejercicio
+
+Este ejercicio se plantea como la primera acción para alcanzar un sistema RAG completo. Este código aporta al fundamento con la subida de archivos más básica posible. Sería deseable tener drag and drop en el futuro cercano. Pero, por ahora, este ejemplo funciona muy bien para fines educativos. 🤓
+
+by: blissito
