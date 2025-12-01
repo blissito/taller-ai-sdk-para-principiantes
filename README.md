@@ -1,43 +1,28 @@
-# Taller AI SDK para principiantes
+# Trabajando con RAG Primera parte
 
-Aprende a construir aplicaciones con IA usando el [Vercel AI SDK](https://ai-sdk.dev).
+Para conseguir que nuestro agente inteligente robótico pueda responder a las preguntas del usuario de una manera útil e informada, necesitaremos colocar en su contexto toda la info de nuestra marca o del tema requerido en el formato que prefiramos.
 
-## Ejercicios
+En esta primera parte del ejecicio, dividiremos un texto grande, que hable de nuestra marca. Y eso, lo vamos a conseguir utilizando Cluade Code o Gemini CLI.
 
-| Branch                           | Descripción          |
-| -------------------------------- | -------------------- |
-| `ejercicio/01-streaming-vanilla` | Express + vanilla JS |
-| `ejercicio/02-react-usechat`     | React + useChat      |
-
-## Instalación
-
-```bash
-git clone https://github.com/blissito/taller-ai-sdk-para-principiantes.git
-cd taller-ai-sdk-para-principiantes
-git checkout ejercicio/01-streaming-vanilla  # o el ejercicio que quieras
-npm install
-cd client && npm install  # solo para ejercicio 02
+```javascript
+Vamos a recopilar info para darsela a un agente
+ para el ejemplo del ejercicio 3 del curso:
+https://www.fixtergeek.com/ai-sdk
+este es mi sitio web: https://www.fixtergeek.com/
+Vamos a usar este ejercicio, de paso, para auditar
+la info de fixtergeek.com y, así luego,
+alcanzar la forma mínima según las
+recomendaciones de GEO o lo que sea que la comunidad esté usando para referirse a la optimización de busqueda en sistemas agénticos.
 ```
 
-## Configuración
+De esta manera orientamos perfectamente el resultado que buscamos. 🧠
 
-Crea un archivo `.env` con tu API key de OpenAI:
+> 👀 Si usas Claude Code, de preferencia, hazlo en modo plan.
 
-```
-OPENAI_API_KEY=tu-api-key
-PORT=3000
-```
+Así es como yo le pido a Opus 4.5, que es el modelo que Claude me ha estado prestando; y funciona de maravilla, una cosa bella. ✅
 
-## Ejecución
+Vamos a poner esta información en un archivo aparte para crear un sistema RAG completo, incluyendo la importación de archivos vía React. 😎
 
-```bash
-npm run dev
-```
+## Herramientas usadas en este ejemplo
 
-## Taller completo
-
-[fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
-
-## Autor
-
-[blissito](https://github.com/blissito)
+Instalado en esta branch encontrarás a streamdown.ai lo usamos para renderizar correctamente el markdown natural de la respuesta del LLM. 🤩
