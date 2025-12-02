@@ -66,28 +66,8 @@ app.post("/api/search", async (req, res) => {
 app.post("/api/chat", async (req, res) => {
   const { messages, sessionId } = req.body;
 
-  // @TODO Save the conversation 🤓 and use "originalMessages" from AI SDK
-
-  // Si hay sessionId, buscar contexto relevante
-  let contextChunks: string[] = [];
-  if (sessionId && messages.length > 0) {
-    const lastMessage = messages[messages.length - 1];
-    const userQuery: string =
-      lastMessage.parts?.find((p: { type: string }) => p.type === "text")
-        ?.text || "";
-
-    // Se busca el contexto en cada mensaje, lo que lo convierte en un contexto en movimiento, mutable, mutante. 🫠
-    if (userQuery) {
-      const similar = await findSimilarChunks(sessionId, userQuery, 3);
-      contextChunks = similar.map(
-        (s) =>
-          `[Similitud: ${(s.similarity * 100).toFixed(1)}%] ${s.chunk.content}`
-      );
-      console.info(`Encontrados ${contextChunks.length} chunks relevantes`);
-    }
-  }
-
-  const result = chat(messages, contextChunks); // RAG
+  // Pasar sessionId para que las tools puedan buscar en embeddings
+  const result = chat(messages, sessionId);
   result.pipeUIMessageStreamToResponse(res);
 });
 

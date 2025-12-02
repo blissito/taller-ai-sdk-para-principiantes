@@ -2,6 +2,8 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Streamdown } from "streamdown";
 import { cn } from "./lib/utils";
+import { CursoCard } from "./components/CursoCard";
+import type { Curso } from "./data/cursos";
 
 type EmbeddedFile = {
   name: string;
@@ -44,6 +46,25 @@ function XIcon({ className }: { className?: string }) {
     >
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function WrenchIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
     </svg>
   );
 }
@@ -154,10 +175,6 @@ export default function App() {
     setEmbeddedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  useEffect(() => {
-    console.log("EmbeddedFiles: ", embeddedFiles);
-  }, [embeddedFiles]);
-
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -165,8 +182,11 @@ export default function App() {
   }, [messages]);
 
   return (
-    <article className="max-w-2xl mx-auto p-8 font-sans">
-      <h1 className="text-2xl font-bold mb-6">Nuevo Curso: AI-SDK con React</h1>
+    <article className="max-w-4xl mx-auto p-8 font-sans">
+      <h1 className="text-2xl font-bold mb-2">Fixter Assistant</h1>
+      <p className="text-gray-600 mb-6">
+        Pregúntame sobre nuestros cursos de desarrollo
+      </p>
 
       <section>
         {embeddedFiles.length > 0 && (
@@ -206,25 +226,87 @@ export default function App() {
         )}
       </section>
 
-      <main className="space-y-1 min-h-[70vh] max-h-[70vh] overflow-scroll">
+      <main
+        className="space-y-4 min-h-[70vh] max-h-[70vh] overflow-auto pb-4"
+        style={{ scrollbarWidth: undefined }}
+      >
         {messages.map((m) => (
           <div key={m.id}>
             <strong className="text-sm text-gray-800">{m.role}:</strong>
             {m.parts.map((part, i) => {
-              if (part.type !== "text") return null;
-              const displayText =
-                m.role === "user" ? stripContextTags(part.text) : part.text; // Evitamos el system prompt
-              if (!displayText) return null;
-              return <Streamdown key={i}>{displayText}</Streamdown>;
+              // Texto normal
+              if (part.type === "text") {
+                const displayText =
+                  m.role === "user" ? stripContextTags(part.text) : part.text;
+                if (!displayText) return null;
+                return <Streamdown key={i}>{displayText}</Streamdown>;
+              }
+
+              // Tool Badge component
+              const ToolBadge = ({ name, loading }: { name: string; loading?: boolean }) => (
+                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium mb-2 ${
+                  loading
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-blue-100 text-blue-700"
+                }`}>
+                  <WrenchIcon className={loading ? "animate-spin" : ""} />
+                  <span>{name}</span>
+                  {loading && <span className="animate-pulse">...</span>}
+                </div>
+              );
+
+              // AI SDK 5.0: tool-${toolName} con estados output-available/input-available
+              // showCourse - mostrar card de curso
+              if (part.type === "tool-showCourse") {
+                if (part.state === "output-available" && part.output) {
+                  const curso = part.output as Curso;
+                  return (
+                    <div key={i} className="my-2">
+                      <ToolBadge name="showCourse" />
+                      <div className="max-w-sm">
+                        <CursoCard curso={curso} />
+                      </div>
+                    </div>
+                  );
+                }
+                if (part.state === "input-available") {
+                  return (
+                    <div key={i} className="my-2">
+                      <ToolBadge name="showCourse" loading />
+                    </div>
+                  );
+                }
+              }
+
+              // searchContext - mostrar resultados de búsqueda
+              if (part.type === "tool-searchContext") {
+                if (part.state === "output-available" && part.output) {
+                  return (
+                    <div key={i} className="my-2">
+                      <ToolBadge name="searchContext" />
+                    </div>
+                  );
+                }
+                if (part.state === "input-available") {
+                  return (
+                    <div key={i} className="my-2">
+                      <ToolBadge name="searchContext" loading />
+                    </div>
+                  );
+                }
+              }
+
+              return null;
             })}
           </div>
         ))}
+        <div ref={scrollRef} />
       </main>
 
       <form
         onSubmit={handleSubmit}
         className={cn("space-y-3 flex flex-col justify-end ", {
-          "bg-white p-4 border border-gray-200 rounded-2xl relative -top-6":
+          "bg-white p-4 border border-gray-200 rounded-2xl relative -top-4":
             true,
         })}
       >
