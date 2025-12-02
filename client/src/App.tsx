@@ -158,8 +158,14 @@ export default function App() {
     console.log("EmbeddedFiles: ", embeddedFiles);
   }, [embeddedFiles]);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
-    <article className="max-w-2xl mx-auto p-8 font-sans relative max-h-[97vh] ">
+    <article className="max-w-2xl mx-auto p-8 font-sans">
       <h1 className="text-2xl font-bold mb-6">Nuevo Curso: AI-SDK con React</h1>
 
       <section>
@@ -200,10 +206,10 @@ export default function App() {
         )}
       </section>
 
-      <main className="space-y-4 mb-6 min-h-[800px] pb-[40px]">
+      <main className="space-y-1 min-h-[70vh] max-h-[70vh] overflow-scroll">
         {messages.map((m) => (
           <div key={m.id}>
-            <strong className="text-sm text-gray-600">{m.role}:</strong>
+            <strong className="text-sm text-gray-800">{m.role}:</strong>
             {m.parts.map((part, i) => {
               if (part.type !== "text") return null;
               const displayText =
@@ -218,10 +224,8 @@ export default function App() {
       <form
         onSubmit={handleSubmit}
         className={cn("space-y-3 flex flex-col justify-end ", {
-          "bg-white": true,
-          absolute: true,
-          "bottom-[40px] left-0 right-0": true,
-          "p-4 rounded-3xl": true,
+          "bg-white p-4 border border-gray-200 rounded-2xl relative -top-6":
+            true,
         })}
       >
         <div className="flex items-center gap-2">
