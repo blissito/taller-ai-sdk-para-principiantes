@@ -1,65 +1,37 @@
-# Recibiendo streams con puro vanilla
+# Generando streams desde una inferencia básica
 
-En este ejercicio exploraremos el trabajo cliente/servidor que se requiere para recibir y manipular streams de manera nativa. 🍛
-
-Para el backend usaremos la herramienta que Vercel ya nos provee: `pipeTextStreamToResponse` y para el cliente: el tradicional `TextDecoder()` usando el reader que ya viene en la respuesta:
+Pedirle algo al LLM es crear/generar/detonar una inferencia. ✅
 
 ```ts
-ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>;
+import { streamText } from "ai";
 
-const response = await fetch("/api/chat");
-const reader = response.body.getReader();
+const chat = (prompt: string) =>
+  streamText({
+    model,
+    system,
+    prompt,
+  });
 ```
 
-## El cambio en la arquitectura
+Creamos la función chat para poder recibir el prompt desde fuera. 🤓
+Los streams son la manera más moderna y adoptada por la industria web para crear la mejor experiencia de chat con robots. 🤖
 
-Tenemos una carpeta public en la que colocaremos los archivos estáticos del cliente. En esta simplificación son solo dos:
-`client.js` e `index.html`.
+## ¿Cómo ejecutamos este script?
 
-Index solo aporta el markup básico y la referencia al pedacito de js que se requiere:
-
-```ts
-    <h1>Blissmo Chat Stream Demo</h1>
-    <button id="start">Iniciar Stream</button>
-    <div id="output"></div>
-    <script type="module" src="/client.js"></script>
-```
-
-Los archivos estaticos son provistos por:
+Vamos a ejecutar nuestro programa y recorrer el stream para devolver parte por parte a la consola.
 
 ```ts
-app.use(express.static("public")); // home page
-```
+const { textStream } = chat("Díme un poema robótico");
 
-Esto garantiza que la carpeta public se sirve de manera estática. ✅
-
-## Mientras que el backend se prepara en la ruta api/chat
-
-Usamos la función chat de nuestro archivo index.ts, que es el origen de la inferencia. 🫆
-
-```ts
-app.get("/api/chat", async (_, res) => {
-  const result = chat("crea un poema sobre robots");
-  result.pipeTextStreamToResponse(res); // aqui una función fancy del StreamTextResult 🎀
-});
-```
-
-Para responder al cliente usamos la utilidad para hacer pipe con `res`.
-
-## ¿Cómo consume el cliente este endpoint?
-
-Si vamos a client.js veremos que hemos detectamos el clic en el botón y que hemos detonado un loop infinito:
-
-```ts
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  output.textContent += decoder.decode(value); // lo volvemos texto
+for await (const part of textStream) {
+  process.stdout.write(part);
 }
 ```
 
-Rompemos el loop si el _reader_ devuelve `done` junto con el `value`. 🤔 Pero, mientras `done` sea falso, seguiremos añadiendo el texto decodificado al nodo `#output`. 📝
+Ejecutamos el programa con: `npm run dev` que a su vez hace, simplemente: `tsx index.ts`. `tsx` es la manera más fácil de ejecutar TypeScript en Node.js. ✅
 
-## Conclusión
+## El entorno web
 
-En este ejercicio no nos preocupamos aún por enviar el prompt desde el cliente, ejecutamos uno pre-definido. 👩🏻‍💻 En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, pero lo haremos ya con Vite y React. 💬⚛
+No siempre queremos ejecutar scripts desde nuestra terminal, a veces se apetece crearnos una interfaz web, para ello usaremos el framework para crear un servidor más famoso de Node.js: express.js. ✅ Todo esto, en el siguiente ejercicio. 🧑🏻‍💻
+
+> 👀 Hoy en día es más recomendable usar Hono que es compatible con multiples runtimes no solo Node.js. Además de ser mucho más rápido y usar patterns más modernos y apegados a la programación funcional. 👍🏼 Hay una branch bonus en la que usamos un servidor Hono en vez de express. `origin/ejercicio/bonus-migrate_to_hono`. ⬅️
