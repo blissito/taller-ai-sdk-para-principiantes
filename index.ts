@@ -13,3 +13,36 @@ export const chat = (messages: UIMessage[]) =>
     system,
     messages: convertToModelMessages(messages),
   });
+
+export const chatWithPDF = (messages: UIMessage[]) => {
+  const msgs = convertToModelMessages(messages);
+  const fileAlreadyLoaded = msgs.find(
+    (msj) => msj.role === "assistant" && msj.content[0].type === "file"
+  );
+
+  if (fileAlreadyLoaded) {
+    return streamText({
+      model,
+      system,
+      messages: msgs,
+    });
+  }
+
+  return streamText({
+    model,
+    system,
+    messages: [
+      ...msgs,
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "file",
+            mediaType: "application/pdf",
+            data: readFileSync("/prompt.pdf"),
+          },
+        ],
+      },
+    ],
+  });
+};

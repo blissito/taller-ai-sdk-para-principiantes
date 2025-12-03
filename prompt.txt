@@ -17,7 +17,6 @@ React, JavaScript, TypeScript, Firebase, Tailwind CSS, MongoDB, Node.js, Rust, D
 
 ## Cursos destacados
 - AI SDK (Vercel) - Curso más reciente - https://fixtergeek.com/ai-sdk
-- Domina Gemini CLI - 6h - Principiante - https://fixtergeek.com/gemini
 - Power-User en Claude Code - 2h - Avanzado - https://fixtergeek.com/claude-code
 - React + Motion (14 componentes) - 10h - Intermedio - https://fixtergeek.com/motion
 - React Router Full Stack - 1h - Gratis - https://fixtergeek.com/react-router
