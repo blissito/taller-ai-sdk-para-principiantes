@@ -48,3 +48,8 @@ app.post("/stream-data", async (c) => {
 
 serve({ fetch: app.fetch, port: 8080 });
 ```
+
+@TODO:
+
+- implementar la ruta
+- usar el merged stream para renderizar un artefacto?
