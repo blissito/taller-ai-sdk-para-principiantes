@@ -105,13 +105,32 @@ const handleSubmit = (e: React.FormEvent) => {
 ```
 
 Esta es una demostración de cómo podemos enviar mensajes junto con el contexto extraído de un archivo. ✅ Sin embargo, es un ejercicio para visualizar mejor pero que no escala bien. 😗
-Para poder pensar en cientos de archivos hay que pensar en miles de pedacitos. 🧱 Y eso es justo lo que haremos en el siguiente ejercicio, haremos todos estos archivos pedacitos y los pondremos en una base de datos. 🔎
+Para poder pensar en cientos de archivos hay que pensar en miles de pedacitos. 🧱 Y eso es justo lo que haremos en el siguiente ejercicio, haremos todos estos archivos pedacitos y los podríamos poner en una base de datos. 🔎
 
 ## BONUS
 
 Estoy leyendo los docs para enviar un documento PDF como parte de los mensajes.
 ¿Podrías imaginar una mejor implementación? ¿Tal vez, que se reciba el contenido o el archivo mismo desde el cliente y tal vez, trabajar con otro tipo de datos. 🤷🏻
 `fileAlreadyLoaded` intenta evitar la carga multiple del archivo, pero mis tipos no cooperan... 🤔
+
+> 👀 Hay que tomar en cuenta que una mejora inmediata sería usar la versión 6 del AI-SDK que está en beta y obtener datos estructurados desde un streamText:
+
+```ts
+const result = await streamText({
+  model: openai("gpt-4.1"),
+  prompt: "¿Cómo hago tamales mexicanos?",
+  output: Output.object({
+    schema: z.object({
+      ingredients: z.array(z.string()),
+      steps: z.array(z.string()),
+    }),
+  }),
+});
+```
+
+Pero esto lo dejamos para otros ejercicios cuando estemos probando beta. 🤓
+
+Por ahora, este es un ejemplo de cómo pasar un PDF:
 
 ```ts
 export const chatWithPDF = (messages: UIMessage[]) => {
