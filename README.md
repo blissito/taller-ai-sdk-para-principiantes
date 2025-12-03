@@ -62,4 +62,4 @@ Rompemos el loop si el _reader_ devuelve `done` junto con el `value`. 🤔 Pero,
 
 ## Conclusión
 
-En este ejercicio no nos preocupamos aún por enviar el prompt desde el cliente, ejecutamos uno pre-definido. 👩🏻‍💻 En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, pero lo haremos ya con React. 💬⚛
+En este ejercicio no nos preocupamos aún por enviar el prompt desde el cliente, ejecutamos uno pre-definido. 👩🏻‍💻 En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, pero lo haremos ya con Vite y React. 💬⚛
