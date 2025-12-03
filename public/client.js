@@ -3,7 +3,7 @@ const button = document.getElementById("start");
 
 async function startStream() {
   output.textContent = "";
-  const response = await fetch("/chat");
+  const response = await fetch("/api/chat");
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
 
