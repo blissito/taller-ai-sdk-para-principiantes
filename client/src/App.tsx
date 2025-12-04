@@ -4,6 +4,8 @@ import { Streamdown } from "streamdown";
 import { cn } from "./lib/utils";
 import { CursoCard } from "./components/CursoCard";
 import type { Curso } from "./data/cursos";
+import { AnimatePresence, motion } from "motion/react";
+import { DefaultChatTransport } from "ai";
 
 type EmbeddedFile = {
   name: string;
@@ -100,7 +102,11 @@ export default function App() {
   // Generar sessionId único para esta sesión
   const sessionId = useMemo(() => crypto.randomUUID(), []);
 
-  const { messages, sendMessage } = useChat();
+  const { messages, sendMessage } = useChat({
+    transport: new DefaultChatTransport({
+      api: "/api/chat_with_artifact",
+    }),
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,160 +187,216 @@ export default function App() {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  return (
-    <article className="max-w-4xl mx-auto p-8 font-sans">
-      <h1 className="text-2xl font-bold mb-2">Fixter Assistant</h1>
-      <p className="text-gray-600 mb-6">
-        Pregúntame sobre nuestros cursos de desarrollo
-      </p>
+  const artifactContent = useMemo(() => {
+    return messages
+      .flatMap((message) => message.parts) // 🪄
+      .filter((part) => part.type === "data-custom")
+      .map(
+        (part) =>
+          (part as { type: "data-custom"; data: { custom: string } }).data
+            .custom
+      )
+      .join("");
+  }, [messages]);
 
-      <section>
-        {embeddedFiles.length > 0 && (
-          <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg mb-4">
-            {embeddedFiles.map((file, i) => (
-              <div
-                key={i}
-                className={`flex items-center gap-2 px-3 py-1.5 border rounded-full text-sm ${
-                  file.status === "loading"
-                    ? "bg-yellow-50 border-yellow-200"
-                    : file.status === "error"
-                    ? "bg-red-50 border-red-200"
-                    : "bg-green-50 border-green-200"
-                }`}
-              >
-                <span className="truncate max-w-[250px]">
-                  {file.status === "loading" && "Procesando... "}
-                  {file.status === "error" && "Error: "}
-                  {file.status === "ready" && "Embeddings: "}
-                  {file.name}
-                  {file.status === "ready" && (
-                    <span className="text-gray-500 ml-1">
-                      ({file.chunksCount} chunks)
-                    </span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removeFile(i)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+  const isArtifactPresent = artifactContent.length > 0;
+
+  return (
+    <AnimatePresence>
+      <header className="m-6">
+        <h1 className="text-2xl font-bold mb-2">Fixter Assistant</h1>
+        <p className="text-gray-600 mb-6">
+          Pregúntame sobre nuestros cursos de desarrollo
+        </p>
+      </header>
+
+      <article
+        id="Container"
+        className={cn("font-sans h-svh max-h-[900px]", "flex", "items-stretch")}
+      >
+        {isArtifactPresent && (
+          <section
+            id="Artifact"
+            className={cn(
+              "min-w-[60vw] bg-blue-950 h-full",
+              "rounded-3xl rounded-l-none",
+              "mr-2",
+              "font-mono text-sm text-gray-100 p-6 overflow-auto whitespace-pre-wrap"
+            )}
+          >
+            <Streamdown>{artifactContent}</Streamdown>
+          </section>
+        )}
+
+        <section id="Context">
+          {embeddedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg mb-4 ">
+              {embeddedFiles.map((file, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 px-3 py-1.5 border rounded-full text-sm ${
+                    file.status === "loading"
+                      ? "bg-yellow-50 border-yellow-200"
+                      : file.status === "error"
+                      ? "bg-red-50 border-red-200"
+                      : "bg-green-50 border-green-200"
+                  }`}
                 >
-                  <XIcon />
-                </button>
+                  <span className="truncate max-w-[250px]">
+                    {file.status === "loading" && "Procesando... "}
+                    {file.status === "error" && "Error: "}
+                    {file.status === "ready" && "Embeddings: "}
+                    {file.name}
+                    {file.status === "ready" && (
+                      <span className="text-gray-500 ml-1">
+                        ({file.chunksCount} chunks)
+                      </span>
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    <XIcon />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <motion.section
+          layout
+          id="Chat"
+          className={cn(
+            "flex flex-col border-3 rounded-l-3xl overflow-hidden flex-1 mr-1",
+            "p-4",
+            {
+              "rounded-3xl mx-4": !isArtifactPresent,
+            }
+          )}
+        >
+          <main
+            className="space-y-4 h-full overflow-auto pb-4"
+            style={{ scrollbarWidth: undefined }}
+          >
+            {messages.map((m) => (
+              <div key={m.id} className="">
+                <strong className="text-sm text-gray-800">{m.role}:</strong>
+                {m.parts.map((part, i) => {
+                  // Texto normal
+                  if (part.type === "text") {
+                    const displayText =
+                      m.role === "user"
+                        ? stripContextTags(part.text)
+                        : part.text;
+                    if (!displayText) return null;
+                    return <Streamdown key={i}>{displayText}</Streamdown>;
+                  }
+
+                  // Tool Badge component
+                  const ToolBadge = ({
+                    name,
+                    loading,
+                  }: {
+                    name: string;
+                    loading?: boolean;
+                  }) => (
+                    <div
+                      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium mb-2 ${
+                        loading
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-blue-100 text-blue-700"
+                      }`}
+                    >
+                      <WrenchIcon className={loading ? "animate-spin" : ""} />
+                      <span>{name}</span>
+                      {loading && <span className="animate-pulse">...</span>}
+                    </div>
+                  );
+
+                  // AI SDK 5.0: tool-${toolName} con estados output-available/input-available
+                  // showCourse - mostrar card de curso
+                  if (part.type === "tool-showCourse") {
+                    if (part.state === "output-available" && part.output) {
+                      const curso = part.output as Curso;
+                      return (
+                        <div key={i} className="my-2">
+                          <ToolBadge name="showCourse" />
+                          <div className="max-w-sm">
+                            <CursoCard curso={curso} />
+                          </div>
+                        </div>
+                      );
+                    }
+                    if (part.state === "input-available") {
+                      return (
+                        <div key={i} className="my-2">
+                          <ToolBadge name="showCourse" loading />
+                        </div>
+                      );
+                    }
+                  }
+
+                  // searchContext - mostrar resultados de búsqueda
+                  if (part.type === "tool-searchContext") {
+                    if (part.state === "output-available" && part.output) {
+                      return (
+                        <div key={i} className="my-2">
+                          <ToolBadge name="searchContext" />
+                        </div>
+                      );
+                    }
+                    if (part.state === "input-available") {
+                      return (
+                        <div key={i} className="my-2">
+                          <ToolBadge name="searchContext" loading />
+                        </div>
+                      );
+                    }
+                  }
+
+                  return null;
+                })}
               </div>
             ))}
-          </div>
-        )}
-      </section>
+            <div ref={scrollRef} />
+          </main>
 
-      <main
-        className="space-y-4 min-h-[70vh] max-h-[70vh] overflow-auto pb-4"
-        style={{ scrollbarWidth: undefined }}
-      >
-        {messages.map((m) => (
-          <div key={m.id}>
-            <strong className="text-sm text-gray-800">{m.role}:</strong>
-            {m.parts.map((part, i) => {
-              // Texto normal
-              if (part.type === "text") {
-                const displayText =
-                  m.role === "user" ? stripContextTags(part.text) : part.text;
-                if (!displayText) return null;
-                return <Streamdown key={i}>{displayText}</Streamdown>;
-              }
-
-              // Tool Badge component
-              const ToolBadge = ({ name, loading }: { name: string; loading?: boolean }) => (
-                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium mb-2 ${
-                  loading
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-blue-100 text-blue-700"
-                }`}>
-                  <WrenchIcon className={loading ? "animate-spin" : ""} />
-                  <span>{name}</span>
-                  {loading && <span className="animate-pulse">...</span>}
-                </div>
-              );
-
-              // AI SDK 5.0: tool-${toolName} con estados output-available/input-available
-              // showCourse - mostrar card de curso
-              if (part.type === "tool-showCourse") {
-                if (part.state === "output-available" && part.output) {
-                  const curso = part.output as Curso;
-                  return (
-                    <div key={i} className="my-2">
-                      <ToolBadge name="showCourse" />
-                      <div className="max-w-sm">
-                        <CursoCard curso={curso} />
-                      </div>
-                    </div>
-                  );
-                }
-                if (part.state === "input-available") {
-                  return (
-                    <div key={i} className="my-2">
-                      <ToolBadge name="showCourse" loading />
-                    </div>
-                  );
-                }
-              }
-
-              // searchContext - mostrar resultados de búsqueda
-              if (part.type === "tool-searchContext") {
-                if (part.state === "output-available" && part.output) {
-                  return (
-                    <div key={i} className="my-2">
-                      <ToolBadge name="searchContext" />
-                    </div>
-                  );
-                }
-                if (part.state === "input-available") {
-                  return (
-                    <div key={i} className="my-2">
-                      <ToolBadge name="searchContext" loading />
-                    </div>
-                  );
-                }
-              }
-
-              return null;
+          <form
+            onSubmit={handleSubmit}
+            className={cn("flex flex-col justify-end ", "mt-auto", {
+              "bg-white p-4 rounded-2xl": true,
             })}
-          </div>
-        ))}
-        <div ref={scrollRef} />
-      </main>
-
-      <form
-        onSubmit={handleSubmit}
-        className={cn("space-y-3 flex flex-col justify-end ", {
-          "bg-white p-4 border border-gray-200 rounded-2xl relative -top-4":
-            true,
-        })}
-      >
-        <div className="flex items-center gap-2">
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            className="hidden"
-            multiple
-            accept="text/plain,text/markdown,.txt,.md,.pdf,application/pdf,image/*"
-          />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="p-3 text-gray-500 hover:text-blue-500 hover:bg-gray-100 rounded-lg transition-colors"
-            title="Adjuntar archivo"
           >
-            <PaperclipIcon />
-          </button>
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje..."
-            className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </form>
-    </article>
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                multiple
+                accept="text/plain,text/markdown,.txt,.md,.pdf,application/pdf,image/*"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-3 text-gray-500 hover:text-blue-500 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Adjuntar archivo"
+              >
+                <PaperclipIcon />
+              </button>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Escribe tu mensaje..."
+                className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </form>
+        </motion.section>
+      </article>
+    </AnimatePresence>
   );
 }

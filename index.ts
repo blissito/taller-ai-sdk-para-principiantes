@@ -7,6 +7,8 @@ import {
   tool,
   stepCountIs,
   type UIMessage,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
 } from "ai";
 import { z } from "zod";
 import { cursos, type Curso } from "./cursos";
@@ -35,7 +37,10 @@ export const chat = (messages: UIMessage[], sessionId?: string) => {
           }
           const results = await findSimilarChunks(sessionId, query, 3);
           if (results.length === 0) {
-            return { found: false, message: "No encontré información relevante" };
+            return {
+              found: false,
+              message: "No encontré información relevante",
+            };
           }
           return {
             found: true,
@@ -61,7 +66,11 @@ export const chat = (messages: UIMessage[], sessionId?: string) => {
         execute: async ({ courseId }): Promise<Curso> => {
           console.log(`\n🔧 showCourse ejecutado con courseId: "${courseId}"`);
           const curso = cursos.find((c) => c.id === courseId);
-          console.log(`   → Curso encontrado: ${curso?.titulo || "NINGUNO, usando default"}`);
+          console.log(
+            `   → Curso encontrado: ${
+              curso?.titulo || "NINGUNO, usando default"
+            }`
+          );
           return curso || cursos[0];
         },
       }),
@@ -91,4 +100,46 @@ export const chat = (messages: UIMessage[], sessionId?: string) => {
     },
     stopWhen: stepCountIs(2),
   });
+};
+
+export const chat_with_artifact = (data: {
+  messages: UIMessage[];
+  sessionId?: string;
+}) => {
+  const { messages } = data;
+  const lastMessage = messages[messages.length - 1];
+  const userPrompt =
+    lastMessage?.parts
+      ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+      .map((p) => p.text)
+      .join(" ") || "Inventa un componente artifact en código react con ts";
+
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      writer.write({ type: "start" });
+      const defaultResult = streamText({
+        model,
+        system:
+          "Eres un programador React asistente experto en artefactos y ui generativa con LLMs y el Vercel AI-SDK. Importante: sé breve y no devuelvas código.",
+        prompt: userPrompt,
+      });
+      const codeResult = streamText({
+        model,
+        prompt: `
+        Genera el código de un componente Artifact en React.
+        Importante: devuelve solo el código sin notas ni comentarios.
+        `,
+      });
+      for await (const part of codeResult.textStream) {
+        writer.write({
+          type: "data-custom",
+          data: {
+            custom: part,
+          },
+        });
+      }
+      writer.merge(defaultResult.toUIMessageStream());
+    },
+  });
+  return createUIMessageStreamResponse({ stream });
 };

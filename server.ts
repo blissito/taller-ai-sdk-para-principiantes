@@ -1,9 +1,10 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { chat } from ".";
+import { chat, chat_with_artifact } from ".";
 import { chunkFile } from "./chunking";
 import { embedChunks, storeEmbeddings, findSimilarChunks } from "./embeddings";
+import { createUIMessageStream } from "ai";
 
 const PORT = Number(process.env.PORT) || 3000;
 const app = new Hono();
@@ -56,6 +57,12 @@ app.post("/api/chat", async (c) => {
   const { messages, sessionId } = await c.req.json();
   const result = chat(messages, sessionId);
   return result.toUIMessageStreamResponse();
+});
+
+// Sending custom data in a merged stream
+app.post("/api/chat_with_artifact", async (c) => {
+  const { messages, sessionId } = await c.req.json();
+  return chat_with_artifact({ messages, sessionId }); // Returns Response
 });
 
 // Servir frontend estático
