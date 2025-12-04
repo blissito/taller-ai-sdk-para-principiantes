@@ -23,7 +23,8 @@ Aprende a construir aplicaciones con IA usando el [Vercel AI SDK](https://ai-sdk
 | `ejercicio/04-embeddings`        | Embeddings y búsqueda por similitud (RAG)        | 90 min   |
 | Descanso                         |                                                  | 10 min   |
 | `ejercicio/05-tools`             | Tools y UI generativa con componentes            | 70 min   |
-| Q&A y cierre                     | Preguntas, recursos adicionales y despedida      | 30 min   |
+| `ejercicio/06-sending_custom_data` | Datos personalizados y artifacts               | 30 min   |
+| Q&A y cierre                     | Preguntas, recursos adicionales y despedida      | 20 min   |
 
 **Duración total del taller: 7 horas (2 sábados)**
 
