@@ -218,7 +218,7 @@ export default function App() {
           <section
             id="Artifact"
             className={cn(
-              "min-w-[60vw] bg-blue-950 h-full",
+              "min-w-[60vw] max-w-[60vw] bg-blue-950 h-full",
               "rounded-3xl rounded-l-none",
               "mr-2",
               "font-mono text-sm text-gray-100 p-6 overflow-auto whitespace-pre-wrap"

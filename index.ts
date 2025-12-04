@@ -112,33 +112,50 @@ export const chat_with_artifact = (data: {
     lastMessage?.parts
       ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
       .map((p) => p.text)
-      .join(" ") || "Inventa un componente artifact en código react con ts";
+      .join(" ") || "Genera un componente React";
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       writer.write({ type: "start" });
-      const defaultResult = streamText({
-        model,
-        system:
-          "Eres un programador React asistente experto en artefactos y ui generativa con LLMs y el Vercel AI-SDK. Importante: sé breve y no devuelvas código.",
-        prompt: userPrompt,
-      });
+
+      // 1. Generar código y acumularlo mientras se streamea al artifact
+      let fullCode = "";
       const codeResult = streamText({
         model,
-        prompt: `
-        Genera el código de un componente Artifact en React.
-        Importante: devuelve solo el código sin notas ni comentarios.
-        `,
+        system:
+          "Genera solo código React/TypeScript limpio, dentro de un bloque de código markdown.",
+        prompt: userPrompt,
       });
-      for await (const part of codeResult.textStream) {
+
+      for await (const chunk of codeResult.textStream) {
+        fullCode += chunk;
         writer.write({
           type: "data-custom",
-          data: {
-            custom: part,
-          },
+          data: { custom: chunk },
         });
       }
-      writer.merge(defaultResult.toUIMessageStream());
+
+      // 2. CLAVE: Ahora el chat SABE qué código se generó (artifact-aware)
+      const chatResult = streamText({
+        model,
+        system: `Eres un experto React asistente. El usuario pidió generar código y ya se generó.
+
+        CÓDIGO GENERADO:
+        \`\`\`tsx
+        ${fullCode}
+        \`\`\`
+
+        Explica brevemente qué hace el código. Puedes:
+        - Referenciar partes específicas del código (solo si es necesario y en snipets muy pequeños)
+        - Sugerir mejoras si las hay
+        - Responder preguntas sobre el código
+
+        Sé conciso, el usuario ya ve el código en el panel. 
+        Importante: Ya no deberías generes más código, solo explicalo.`,
+        prompt: userPrompt,
+      });
+
+      writer.merge(chatResult.toUIMessageStream());
     },
   });
   return createUIMessageStreamResponse({ stream });
