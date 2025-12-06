@@ -1,68 +1,65 @@
-# Taller AI SDK para principiantes
+# Recibiendo streams con puro vanilla
 
-Aprende a construir aplicaciones con IA usando el [Vercel AI SDK](https://ai-sdk.dev).
+En este ejercicio exploraremos el trabajo cliente/servidor que se requiere para recibir y manipular streams de manera nativa. 🍛
 
-## Ejercicios
+Para el backend usaremos la herramienta que Vercel ya nos provee: `pipeTextStreamToResponse` y para el cliente: el tradicional `TextDecoder()` usando el reader que ya viene en la respuesta:
 
-### Sábado 1: Fundamentos (3.5h)
+```ts
+ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>;
 
-| Actividad                        | Descripción                                      | Duración |
-| -------------------------------- | ------------------------------------------------ | -------- |
-| Introducción                     | Bienvenida, setup y conceptos de AI SDK          | 15 min   |
-| `ejercicio/01-streaming-vanilla` | Streaming básico con Express + vanilla JS        | 50 min   |
-| Descanso                         |                                                  | 10 min   |
-| `ejercicio/02-react-usechat`     | Cliente React con useChat (AI SDK 5)             | 70 min   |
-| Descanso                         |                                                  | 10 min   |
-| `ejercicio/03-upload_context`    | Subida de archivos para contexto                 | 55 min   |
-
-### Sábado 2: Avanzado (3.5h)
-
-| Actividad                        | Descripción                                      | Duración |
-| -------------------------------- | ------------------------------------------------ | -------- |
-| Recap                            | Repaso del sábado anterior                       | 10 min   |
-| `ejercicio/04-embeddings`        | Embeddings y búsqueda por similitud (RAG)        | 90 min   |
-| Descanso                         |                                                  | 10 min   |
-| `ejercicio/05-tools`             | Tools y UI generativa con componentes            | 70 min   |
-| Q&A y cierre                     | Preguntas, recursos adicionales y despedida      | 20 min   |
-
-**Duración total del taller: 7 horas (2 sábados)**
-
-### Bonus (opcional)
-
-| Actividad                            | Descripción                                    | Duración |
-| ------------------------------------ | ---------------------------------------------- | -------- |
-| `ejercicio/06-sending_custom_data`   | Datos personalizados y artifacts               | 30 min   |
-| `ejercicio/bonus-migrate_to_hono`    | Migración de Express a Hono                    | 30 min   |
-
-## Instalación
-
-```bash
-git clone https://github.com/blissito/taller-ai-sdk-para-principiantes.git
-cd taller-ai-sdk-para-principiantes
-git checkout ejercicio/01-streaming-vanilla  # o el ejercicio que quieras
-npm install
-cd client && npm install  # solo para ejercicio 02
+const response = await fetch("/api/chat");
+const reader = response.body.getReader();
 ```
 
-## Configuración
+## El cambio en la arquitectura
 
-Crea un archivo `.env` con tu API key de OpenAI:
+Tenemos una carpeta public en la que colocaremos los archivos estáticos del cliente. En esta simplificación son solo dos:
+`client.js` e `index.html`.
 
+Index solo aporta el markup básico y la referencia al pedacito de js que se requiere:
+
+```ts
+    <h1>Blissmo Chat Stream Demo</h1>
+    <button id="start">Iniciar Stream</button>
+    <div id="output"></div>
+    <script type="module" src="/client.js"></script>
 ```
-OPENAI_API_KEY=tu-api-key
-PORT=3000
+
+Los archivos estaticos son provistos por:
+
+```ts
+app.use(express.static("public")); // home page
 ```
 
-## Ejecución
+Esto garantiza que la carpeta public se sirve de manera estática. ✅
 
-```bash
-npm run dev
+## Mientras que el backend se prepara en la ruta api/chat
+
+Usamos la función chat de nuestro archivo index.ts, que es el origen de la inferencia. 🫆
+
+```ts
+app.get("/api/chat", async (_, res) => {
+  const result = chat("crea un poema sobre robots");
+  result.pipeTextStreamToResponse(res); // aqui una función fancy del StreamTextResult 🎀
+});
 ```
 
-## Taller completo
+Para responder al cliente usamos la utilidad para hacer pipe con `res`.
 
-[fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
+## ¿Cómo consume el cliente este endpoint?
 
-## Autor
+Si vamos a client.js veremos que hemos detectamos el clic en el botón y que hemos detonado un loop infinito:
 
-[blissito](https://github.com/blissito)
+```ts
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+  output.textContent += decoder.decode(value); // lo volvemos texto
+}
+```
+
+Rompemos el loop si el _reader_ devuelve `done` junto con el `value`. 🤔 Pero, mientras `done` sea falso, seguiremos añadiendo el texto decodificado al nodo `#output`. 📝
+
+## Conclusión
+
+En este ejercicio no nos preocupamos aún por enviar el prompt desde el cliente, ejecutamos uno pre-definido. 👩🏻‍💻 En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, pero lo haremos ya con Vite y React. 💬⚛

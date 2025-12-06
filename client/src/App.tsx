@@ -1,42 +1,70 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useChat } from "@ai-sdk/react";
+import { Streamdown } from "streamdown";
+import { useAutoScroll } from "./hooks/useAutoScroll";
 
-export default function App() {
+function App() {
   const [input, setInput] = useState("");
+
   const { messages, sendMessage } = useChat();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim()) return;
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     sendMessage({ text: input });
     setInput("");
   };
 
+  const [containerRef, endRef] = useAutoScroll<HTMLElement>([messages]);
+
   return (
-    <main
-      style={{ maxWidth: 600, margin: "2rem auto", fontFamily: "system-ui" }}
-    >
-      <h1>Blissmo Chat con useChat</h1>
-
-      <div style={{ marginBottom: "1rem" }}>
-        {messages.map((m) => (
-          <div key={m.id} style={{ marginBottom: "0.5rem" }}>
-            <strong>{m.role}:</strong>{" "}
-            {m.parts.map((part, i) =>
-              part.type === "text" ? <span key={i}>{part.text}</span> : null
-            )}
-          </div>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Escribe tu mensaje..."
-          style={{ width: "100%", padding: "0.5rem" }}
-        />
-      </form>
-    </main>
+    <>
+      <article className="flex flex-col bg-gray-100 h-svh max-w-2xl mx-auto">
+        <header className="p-8 shadow-xl">
+          <img
+            className="max-w-xs"
+            src="https://www.fixtergeek.com/logo.png"
+            alt="fixtergeek logo"
+          />
+          <p className="text-2xl font-extralight">
+            Pregunta sobre nuestros cursos y talleres
+          </p>
+        </header>
+        <section
+          ref={containerRef}
+          className="pt-10 px-8 overflow-auto bg-white h-full"
+        >
+          {messages.map((message) => (
+            <div key={message.id}>
+              <p>
+                <strong>{message.role}:</strong>
+              </p>
+              {message.parts.map((part, indx) =>
+                part.type === "text" ? (
+                  <Streamdown key={indx}>{part.text}</Streamdown>
+                ) : null
+              )}
+              <div className="py-3" ref={endRef} />
+            </div>
+          ))}
+        </section>
+        <footer className="mt-auto">
+          <form className="flex gap-1 p-4" onSubmit={handleSubmit}>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.currentTarget.value)}
+              type="text"
+              placeholder="Escribe tus preguntas..."
+              className="w-full border border-gray-200 rounded-2xl py-2 px-3"
+            />
+            <input
+              type="submit"
+              className="border border-gray-300 rounded-2xl py-2 px-6"
+            />
+          </form>
+        </footer>
+      </article>
+    </>
   );
 }
+
+export default App;
