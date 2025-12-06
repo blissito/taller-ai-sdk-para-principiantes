@@ -1,65 +1,138 @@
-# Recibiendo streams con puro vanilla
+# AI SDK Workshop
 
-En este ejercicio exploraremos el trabajo cliente/servidor que se requiere para recibir y manipular streams de manera nativa. 🍛
+> Aprende a construir aplicaciones con IA usando el Vercel AI SDK, desde inferencias básicas hasta UI generativa con artifacts.
 
-Para el backend usaremos la herramienta que Vercel ya nos provee: `pipeTextStreamToResponse` y para el cliente: el tradicional `TextDecoder()` usando el reader que ya viene en la respuesta:
+[![AI SDK](https://img.shields.io/badge/AI%20SDK-v5-blue)](https://ai-sdk.dev)
+[![Hono](https://img.shields.io/badge/Hono-v4-orange)](https://hono.dev)
+[![React](https://img.shields.io/badge/React-v19-61dafb)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6)](https://typescriptlang.org)
 
-```ts
-ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>>;
+## Descripción
 
-const response = await fetch("/api/chat");
-const reader = response.body.getReader();
+Un taller práctico y progresivo para dominar el **Vercel AI SDK**. Cada ejercicio construye sobre el anterior, introduciendo un concepto nuevo mientras refuerza los aprendidos.
+
+**Lo que vas a construir:**
+
+- Streams de texto desde modelos de lenguaje
+- Chat interactivo con React y el hook `useChat`
+- Carga de archivos como contexto para el LLM
+- Sistema de embeddings y búsqueda por similitud
+- Tools para UI generativa y componentes dinámicos
+- Artifacts con streaming dual (código + explicación)
+
+## Requisitos previos
+
+- Node.js 18+
+- Una API key de OpenAI (o compatible)
+- Conocimientos básicos de TypeScript y React
+
+## Quick Start
+
+```bash
+# Clonar el repositorio
+git clone https://github.com/tu-usuario/ai_sdk_curso.git
+cd ai_sdk_curso
+
+# Instalar dependencias
+npm install
+cd client && npm install && cd ..
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tu API key
+
+# Iniciar en modo desarrollo
+npm run dev
 ```
 
-## El cambio en la arquitectura
+## Ejercicios
 
-Tenemos una carpeta public en la que colocaremos los archivos estáticos del cliente. En esta simplificación son solo dos:
-`client.js` e `index.html`.
+Cada ejercicio vive en su propia rama. Navega entre ellos con `git checkout`.
 
-Index solo aporta el markup básico y la referencia al pedacito de js que se requiere:
+| #     | Rama                               | Tema                        | Conceptos clave                                                            |
+| ----- | ---------------------------------- | --------------------------- | -------------------------------------------------------------------------- |
+| 00    | `ejercicio/00-basic_inference`     | **Inferencia básica**       | `streamText`, modelo, system prompt, iteración de streams                  |
+| 01    | `ejercicio/01-streaming-vanilla`   | **Streaming vanilla**       | `pipeTextStreamToResponse`, `TextDecoder`, arquitectura cliente/servidor   |
+| 02    | `ejercicio/02-react-usechat`       | **React + useChat**         | Hook `useChat`, Vite, `pipeUIMessageStreamToResponse`, proxy de desarrollo |
+| 03    | `ejercicio/03-upload_context`      | **Contexto desde archivos** | `FileReader`, inyección de contexto, manejo de PDFs                        |
+| 04    | `ejercicio/04-embeddings`          | **Embeddings**              | Vectores, similitud semántica, chunking de documentos                      |
+| 05    | `ejercicio/05-tools`               | **UI Generativa**           | Tools, renderizado condicional de componentes, system prompts estrictos    |
+| 06    | `ejercicio/06-sending_custom_data` | **Artifacts**               | `createUIMessageStream`, `data-custom`, streaming dual                     |
+| Bonus | `ejercicio/bonus-migrate_to_hono`  | **Migración a Hono**        | Hono vs Express, `toUIMessageStreamResponse`, `serveStatic`                |
 
-```ts
-    <h1>Blissmo Chat Stream Demo</h1>
-    <button id="start">Iniciar Stream</button>
-    <div id="output"></div>
-    <script type="module" src="/client.js"></script>
+### Progresión recomendada
+
+```
+00 → 01 → 02 → 03 → 04 → 05 → 06
+ │                              │
+ └──────── Bonus: Hono ─────────┘
 ```
 
-Los archivos estaticos son provistos por:
+**00 → 01**: De ejecutar en terminal a servir por HTTP
+**01 → 02**: De vanilla JS a React con estado gestionado
+**02 → 03**: De prompts fijos a contexto dinámico desde archivos
+**03 → 04**: De archivos completos a chunks y búsqueda semántica
+**04 → 05**: De texto plano a componentes React dinámicos
+**05 → 06**: De un solo stream a streaming dual con artifacts
 
-```ts
-app.use(express.static("public")); // home page
+## Navegación entre ejercicios
+
+```bash
+# Ver todos los ejercicios disponibles
+git branch -a | grep ejercicio
+
+# Cambiar a un ejercicio específico
+git checkout ejercicio/02-react-usechat
+
+# Volver al estado final (main)
+git checkout main
 ```
 
-Esto garantiza que la carpeta public se sirve de manera estática. ✅
+Cada rama tiene su propio README con explicaciones detalladas del ejercicio.
 
-## Mientras que el backend se prepara en la ruta api/chat
+## Stack
 
-Usamos la función chat de nuestro archivo index.ts, que es el origen de la inferencia. 🫆
+| Capa       | Tecnología                                                |
+| ---------- | --------------------------------------------------------- |
+| AI         | [Vercel AI SDK](https://ai-sdk.dev) v5                    |
+| Backend    | [Hono](https://hono.dev) v4                               |
+| Frontend   | [React](https://react.dev) v19 + [Vite](https://vite.dev) |
+| Lenguaje   | TypeScript 5.9                                            |
+| Validación | Zod                                                       |
 
-```ts
-app.get("/api/chat", async (_, res) => {
-  const result = chat("crea un poema sobre robots");
-  result.pipeTextStreamToResponse(res); // aqui una función fancy del StreamTextResult 🎀
-});
+## Estructura del proyecto
+
+```
+ai_sdk_curso/
+├── index.ts          # Lógica de inferencia y chat
+├── server.ts         # Servidor Hono con endpoints
+├── client/           # Aplicación React
+│   ├── src/
+│   │   └── App.tsx   # Componente principal del chat
+│   └── vite.config.ts
+├── .env              # Variables de entorno (API keys)
+└── package.json
 ```
 
-Para responder al cliente usamos la utilidad para hacer pipe con `res`.
+## Scripts disponibles
 
-## ¿Cómo consume el cliente este endpoint?
-
-Si vamos a client.js veremos que hemos detectamos el clic en el botón y que hemos detonado un loop infinito:
-
-```ts
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  output.textContent += decoder.decode(value); // lo volvemos texto
-}
+```bash
+npm run dev          # Inicia servidor + cliente en paralelo
+npm run build        # Build de producción
+npm start            # Ejecuta build de producción
 ```
 
-Rompemos el loop si el _reader_ devuelve `done` junto con el `value`. 🤔 Pero, mientras `done` sea falso, seguiremos añadiendo el texto decodificado al nodo `#output`. 📝
+## Recursos
 
-## Conclusión
+- [Documentación AI SDK](https://ai-sdk.dev/docs)
+- [Documentación Hono](https://hono.dev/docs)
+- [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
 
-En este ejercicio no nos preocupamos aún por enviar el prompt desde el cliente, ejecutamos uno pre-definido. 👩🏻‍💻 En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, pero lo haremos ya con Vite y React. 💬⚛
+## Autor
+
+Creado por [@blissito](https://github.com/blissito)
+Para [@fixtergeek](https://www.fixtergeek.com)
+
+---
+
+Si este taller te fue útil, considera darle una estrella al repo.
