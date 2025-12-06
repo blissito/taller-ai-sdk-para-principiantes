@@ -17,6 +17,7 @@
     "ai": "^5.0.104",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "hono": "^4.10.7",
     "zod": "^4.1.13"
   },
   "devDependencies": {
