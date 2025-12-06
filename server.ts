@@ -5,8 +5,10 @@ const PORT = process.env.PORT || 3000;
 const app = express();
 
 app.use(express.static("public")); // home page
+app.use(express.json());
 
-app.get("/api/chat", async (_, res) => {
+app.get("/api/chat", async (req, res) => {
+  const { messages } = req.body.json();
   const result = chat("crea un poema sobre robots");
   result.pipeTextStreamToResponse(res);
 });

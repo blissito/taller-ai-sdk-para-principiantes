@@ -4,7 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server.ts"
+    "dev": "npx concurrently \"npm run dev:server\" \"npm run dev:client\" ",
+    "dev:server": "tsx watch server.ts",
+    "dev:client": "npm run dev --prefix client"
   },
   "keywords": [],
   "author": "",
