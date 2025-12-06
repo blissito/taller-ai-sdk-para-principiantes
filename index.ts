@@ -2,7 +2,8 @@ import "dotenv/config";
 import { openai } from "@ai-sdk/openai";
 import { ModelMessage, streamText, UIMessage } from "ai";
 
-const model = openai("gpt-4.1-mini");
+const model = openai("gpt-4o-mini-2024-07-18"); // Cheaper
+// const model = openai("gpt-4.1-mini"); // Good with tools
 
 const system =
   "Eres un robot inteligente que asiste con lo que le piden sin romper las 3 leyes de la rob�tica de isaac asimov";
