@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Streamdown } from "streamdown";
+import { useAutoScroll } from "./hooks/useAutoScroll";
 
 function App() {
   const [input, setInput] = useState("");
@@ -13,14 +14,19 @@ function App() {
     setInput("");
   };
 
+  const [containerRef, endRef] = useAutoScroll<HTMLElement>([messages]);
+
   return (
     <>
-      <article className="flex flex-col bg-gray-100 h-svh">
+      <article className="flex flex-col bg-gray-100 h-svh max-w-2xl mx-auto">
         <header className="p-8 shadow-xl">
           <h1 className="text-6xl font-bold">Fixter Assistant</h1>
           <p>Pregunta sobre nuestros cursos y talleres</p>
         </header>
-        <section className="pt-10 px-8 overflow-auto bg-white h-full">
+        <section
+          ref={containerRef}
+          className="pt-10 px-8 overflow-auto bg-white h-full"
+        >
           {messages.map((message) => (
             <div key={message.id}>
               <p>
@@ -31,6 +37,7 @@ function App() {
                   <Streamdown key={indx}>{part.text}</Streamdown>
                 ) : null
               )}
+              <div className="py-3" ref={endRef} />
             </div>
           ))}
         </section>
