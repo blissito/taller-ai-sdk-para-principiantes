@@ -128,6 +128,15 @@ npm start            # Ejecuta build de producción
 - [Documentación Hono](https://hono.dev/docs)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
 
+## Próximas fechas
+
+| Fecha | Modalidad |
+|-------|-----------|
+| 13 de diciembre 2024 | En vivo |
+| 20 de diciembre 2024 | En vivo |
+
+Regístrate en [fixtergeek.com](https://www.fixtergeek.com)
+
 ## Autor
 
 Creado por [@blissito](https://github.com/blissito)
