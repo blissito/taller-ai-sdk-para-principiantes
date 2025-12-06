@@ -118,8 +118,7 @@ ai_sdk_curso/
 
 ```bash
 npm run dev          # Inicia servidor + cliente en paralelo
-npm run build        # Build de producción
-npm start            # Ejecuta build de producción
+npm run deploy       # Deploy a producción (Fly.io)
 ```
 
 ## Recursos

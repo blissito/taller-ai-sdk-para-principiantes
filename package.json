@@ -10,7 +10,8 @@
     "build": "npm run build:client && npm run build:server",
     "build:client": "npm run build --prefix client",
     "build:server": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "deploy": "fly deploy"
   },
   "keywords": [],
   "author": "",
