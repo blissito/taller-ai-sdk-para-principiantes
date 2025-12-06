@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://www.fixtergeek.com/logo.png" alt="Fixtergeek" width="200" />
+</p>
+
 # AI SDK Workshop
 
 > Aprende a construir aplicaciones con IA usando el Vercel AI SDK, desde inferencias básicas hasta UI generativa con artifacts.
