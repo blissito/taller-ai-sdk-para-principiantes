@@ -20,8 +20,14 @@ function App() {
     <>
       <article className="flex flex-col bg-gray-100 h-svh max-w-2xl mx-auto">
         <header className="p-8 shadow-xl">
-          <h1 className="text-6xl font-bold">Fixter Assistant</h1>
-          <p>Pregunta sobre nuestros cursos y talleres</p>
+          <img
+            className="max-w-xs"
+            src="https://www.fixtergeek.com/logo.png"
+            alt="fixtergeek logo"
+          />
+          <p className="text-2xl font-extralight">
+            Pregunta sobre nuestros cursos y talleres
+          </p>
         </header>
         <section
           ref={containerRef}
