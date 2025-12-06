@@ -125,6 +125,41 @@ npm run dev          # Inicia servidor + cliente en paralelo
 npm run deploy       # Deploy a producción (Fly.io)
 ```
 
+## Deploy a producción
+
+El repositorio está **listo para producción** en [Fly.io](https://fly.io). Incluye:
+
+| Archivo | Propósito |
+|---------|-----------|
+| `Dockerfile` | Build multi-stage optimizado (builder + runner) |
+| `fly.toml` | Configuración de Fly.io |
+
+### Características del setup
+
+- **Multi-stage build**: Separa la compilación del runtime para imágenes más ligeras
+- **Usuario no-root**: El contenedor corre con usuario `hono` por seguridad
+- **Auto-scaling**: Las máquinas se suspenden cuando no hay tráfico y despiertan automáticamente
+- **HTTPS forzado**: Todo el tráfico se redirige a HTTPS
+- **Región**: Dallas (dfw) por defecto, configurable en `fly.toml`
+
+### Primeros pasos con Fly.io
+
+```bash
+# Instalar CLI de Fly
+curl -L https://fly.io/install.sh | sh
+
+# Autenticarse
+fly auth login
+
+# Configurar secretos (tu API key)
+fly secrets set OPENAI_API_KEY=sk-...
+
+# Deploy
+npm run deploy
+```
+
+Tu app estará disponible en `https://ai-sdk-curso.fly.dev`
+
 ## Recursos
 
 - [Documentación AI SDK](https://ai-sdk.dev/docs)
