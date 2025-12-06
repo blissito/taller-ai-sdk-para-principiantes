@@ -130,12 +130,12 @@ npm start            # Ejecuta build de producción
 
 ## Próximas fechas
 
-| Fecha | Modalidad |
-|-------|-----------|
-| 13 de diciembre 2024 | En vivo |
-| 20 de diciembre 2024 | En vivo |
+| Fecha                | Modalidad |
+| -------------------- | --------- |
+| 13 de diciembre 2024 | En vivo   |
+| 20 de diciembre 2024 | En vivo   |
 
-Regístrate en [fixtergeek.com](https://www.fixtergeek.com)
+Regístrate en [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
 
 ## Autor
 
