@@ -208,18 +208,18 @@ export function adminDashboardHTML() {
             </div>
           </div>
 
+          <h3 style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem;">Origenes Permitidos</h3>
+
+          <!-- Orígenes de ENV VARS (read-only) - siempre visible -->
+          <div id="env-origins-section" style="margin-bottom: 1rem; display: none;">
+            <label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
+              De variables de entorno (solo lectura)
+            </label>
+            <div id="env-origins-chips" class="chips"></div>
+          </div>
+
+          <!-- Orígenes editables (DB) - se deshabilita en modo público -->
           <div id="origins-section">
-            <h3 style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem;">Origenes Permitidos</h3>
-
-            <!-- Orígenes de ENV VARS (read-only) -->
-            <div id="env-origins-section" style="margin-bottom: 1rem; display: none;">
-              <label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
-                De variables de entorno (solo lectura)
-              </label>
-              <div id="env-origins-chips" class="chips"></div>
-            </div>
-
-            <!-- Orígenes editables (DB) -->
             <div class="form-group">
               <label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
                 Agregar desde el panel
@@ -344,16 +344,18 @@ export function adminDashboardHTML() {
   </div>
 
   <script>
-    // Tab switching
+    // State
+    let currentTab = 'dashboard';
+    let currentConfig = { publicAccess: false, allowedOrigins: '' };
+
+    // Tab switching - persiste la pestaña activa
     function showTab(tab) {
+      currentTab = tab;
       document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
       document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
       document.getElementById('tab-' + tab).style.display = 'block';
       document.querySelector('.tab[onclick*="' + tab + '"]').classList.add('active');
     }
-
-    // State
-    let currentConfig = { publicAccess: false, allowedOrigins: '' };
 
     // Toggle public access
     async function togglePublicAccess() {
