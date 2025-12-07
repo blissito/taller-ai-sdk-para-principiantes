@@ -69,16 +69,21 @@ function Widget() {
       </header>
 
       {/* Messages */}
-      <section ref={containerRef} className="flex-1 overflow-auto p-4 space-y-4">
+      <section
+        ref={containerRef}
+        className="flex-1 overflow-auto p-4 space-y-4"
+      >
         {messages.length === 0 && (
           <div className="text-center text-gray-400 mt-8">
-            <p>Hola! ¿En qué puedo ayudarte?</p>
+            <p>¡Qué tal! ¿En qué puedo ayudarte?</p>
           </div>
         )}
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex ${
+              message.role === "user" ? "justify-end" : "justify-start"
+            }`}
           >
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-2 ${

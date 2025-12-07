@@ -33,6 +33,8 @@ interface ChatWidgetAPI {
   let toggleBtn: HTMLButtonElement;
   let expandBtn: HTMLButtonElement;
   let resizeHandle: HTMLDivElement;
+  let controls: HTMLDivElement;
+  let iframeContainer: HTMLDivElement;
   let isResizing = false;
   let currentWidth = 380;
 
@@ -40,13 +42,18 @@ interface ChatWidgetAPI {
   const MIN_SIDEBAR_WIDTH = 280;
   const MAX_SIDEBAR_WIDTH = 800;
   const STEP_SIZE = 50; // Saltos de 50px para sensación de "snap"
-  const TRANSITION = "all 0.3s ease-in-out";
+  const TRANSITION =
+    "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
+  const HOST_TRANSITION = "margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)";
 
   function init() {
     // Cargar ancho guardado del localStorage
     const savedWidth = localStorage.getItem("chat-widget-width");
     if (savedWidth) {
-      currentWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, parseInt(savedWidth, 10)));
+      currentWidth = Math.max(
+        MIN_SIDEBAR_WIDTH,
+        Math.min(MAX_SIDEBAR_WIDTH, parseInt(savedWidth, 10))
+      );
     } else {
       currentWidth = DEFAULT_SIDEBAR_WIDTH;
     }
@@ -66,8 +73,9 @@ interface ChatWidgetAPI {
     hostContent.style.cssText = `
       flex: 1;
       min-width: 0;
-      transition: ${TRANSITION};
+      transition: ${HOST_TRANSITION};
       overflow: auto;
+      margin-right: 0;
     `;
 
     // Mover todos los hijos del body al hostContent
@@ -79,13 +87,13 @@ interface ChatWidgetAPI {
       }
     }
 
-    // Crear sidebar
+    // Crear sidebar (posición fija, siempre tiene su ancho, usa translateX para animar)
     sidebar = document.createElement("div");
     sidebar.id = "chat-widget-sidebar";
     sidebar.style.cssText = `
-      width: 0;
+      width: ${currentWidth}px;
       height: 100vh;
-      position: sticky;
+      position: fixed;
       top: 0;
       right: 0;
       background: #fff;
@@ -94,6 +102,8 @@ interface ChatWidgetAPI {
       overflow: visible;
       display: flex;
       flex-direction: column;
+      transform: translateX(100%);
+      z-index: 10000;
     `;
 
     // Crear resize handle (barra vertical en el borde izquierdo)
@@ -130,6 +140,7 @@ interface ChatWidgetAPI {
       e.stopPropagation();
       isResizing = true;
       sidebar.style.transition = "none";
+      hostContent.style.transition = "none";
       resizeHandle.style.opacity = "1";
       resizeHandle.style.background = "#3b82f6";
       document.body.style.cursor = "ew-resize";
@@ -144,10 +155,14 @@ interface ChatWidgetAPI {
       const rawWidth = window.innerWidth - clientX;
       // Aplicar steps para sensación de "snap"
       const snappedWidth = Math.round(rawWidth / STEP_SIZE) * STEP_SIZE;
-      if (snappedWidth >= MIN_SIDEBAR_WIDTH && snappedWidth <= MAX_SIDEBAR_WIDTH) {
+      if (
+        snappedWidth >= MIN_SIDEBAR_WIDTH &&
+        snappedWidth <= MAX_SIDEBAR_WIDTH
+      ) {
         if (snappedWidth !== currentWidth) {
           currentWidth = snappedWidth;
           sidebar.style.width = `${currentWidth}px`;
+          hostContent.style.marginRight = `${currentWidth}px`;
         }
       }
     };
@@ -156,6 +171,7 @@ interface ChatWidgetAPI {
       if (isResizing) {
         isResizing = false;
         sidebar.style.transition = TRANSITION;
+        hostContent.style.transition = HOST_TRANSITION;
         resizeHandle.style.opacity = "0.7";
         resizeHandle.style.background = "#d1d5db";
         document.body.style.cursor = "";
@@ -172,18 +188,21 @@ interface ChatWidgetAPI {
     window.addEventListener("mouseup", stopResize);
 
     // Touch events para móvil
-    resizeHandle.addEventListener("touchstart", startResize, { passive: false });
+    resizeHandle.addEventListener("touchstart", startResize, {
+      passive: false,
+    });
     window.addEventListener("touchmove", doResize, { passive: false });
     window.addEventListener("touchend", stopResize);
 
     // Crear barra de controles del sidebar
-    const controls = document.createElement("div");
+    controls = document.createElement("div");
     controls.style.cssText = `
       display: flex;
       justify-content: space-between;
       padding: 8px;
       background: #1f2937;
       border-bottom: 1px solid #374151;
+      transition: padding 0.3s ease;
     `;
 
     // Botón cerrar/colapsar
@@ -231,6 +250,15 @@ interface ChatWidgetAPI {
     controls.appendChild(toggleBtn);
     controls.appendChild(expandBtn);
 
+    // Crear contenedor del iframe (para poder aplicar padding en fullscreen)
+    iframeContainer = document.createElement("div");
+    iframeContainer.style.cssText = `
+      flex: 1;
+      display: flex;
+      transition: padding 0.3s ease;
+      background: #1f2937;
+    `;
+
     // Crear iframe
     iframe = document.createElement("iframe");
     iframe.src = `${baseUrl}/widget`;
@@ -240,9 +268,10 @@ interface ChatWidgetAPI {
       border: none;
     `;
 
+    iframeContainer.appendChild(iframe);
     sidebar.appendChild(resizeHandle);
     sidebar.appendChild(controls);
-    sidebar.appendChild(iframe);
+    sidebar.appendChild(iframeContainer);
 
     // Crear tab lateral (estilo cajón/drawer)
     const tabBtn = document.createElement("button");
@@ -300,15 +329,21 @@ interface ChatWidgetAPI {
 
     switch (state) {
       case "closed":
-        sidebar.style.width = "0";
-        hostContent.style.flex = "1";
+        sidebar.style.transform = "translateX(100%)";
+        sidebar.style.width = `${currentWidth}px`;
+        hostContent.style.marginRight = "0";
+        controls.style.padding = "8px";
+        iframeContainer.style.padding = "0";
         if (tab) tab.style.display = "flex";
         resizeHandle.style.display = "none";
         break;
 
       case "sidebar":
+        sidebar.style.transform = "translateX(0)";
         sidebar.style.width = `${currentWidth}px`;
-        hostContent.style.flex = "1";
+        hostContent.style.marginRight = `${currentWidth}px`;
+        controls.style.padding = "8px";
+        iframeContainer.style.padding = "0";
         if (tab) tab.style.display = "none";
         resizeHandle.style.display = "block";
         expandBtn.innerHTML = "⛶";
@@ -316,10 +351,11 @@ interface ChatWidgetAPI {
         break;
 
       case "expanded":
+        sidebar.style.transform = "translateX(0)";
         sidebar.style.width = "100vw";
-        hostContent.style.flex = "0";
-        hostContent.style.width = "0";
-        hostContent.style.overflow = "hidden";
+        hostContent.style.marginRight = "100vw";
+        controls.style.padding = "8px 8px 8px 24px";
+        iframeContainer.style.padding = "0 0 0 16px";
         if (tab) tab.style.display = "none";
         resizeHandle.style.display = "none";
         expandBtn.innerHTML = "⛶";
@@ -331,17 +367,11 @@ interface ChatWidgetAPI {
   const ChatWidget: ChatWidgetAPI = {
     open() {
       state = "sidebar";
-      hostContent.style.flex = "1";
-      hostContent.style.width = "";
-      hostContent.style.overflow = "auto";
       updateUI();
     },
 
     close() {
       state = "closed";
-      hostContent.style.flex = "1";
-      hostContent.style.width = "";
-      hostContent.style.overflow = "auto";
       updateUI();
     },
 
