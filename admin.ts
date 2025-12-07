@@ -210,12 +210,24 @@ export function adminDashboardHTML() {
 
           <div id="origins-section">
             <h3 style="font-size: 0.875rem; color: #94a3b8; margin-bottom: 0.75rem;">Origenes Permitidos</h3>
+
+            <!-- Orígenes de ENV VARS (read-only) -->
+            <div id="env-origins-section" style="margin-bottom: 1rem; display: none;">
+              <label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
+                De variables de entorno (solo lectura)
+              </label>
+              <div id="env-origins-chips" class="chips"></div>
+            </div>
+
+            <!-- Orígenes editables (DB) -->
             <div class="form-group">
+              <label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem;">
+                Agregar desde el panel
+              </label>
               <input type="text" id="new-origin-input" placeholder="midominio.com, otro.com" style="font-family: monospace;">
               <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.5rem;">Separados por comas. Soporta subdominios automaticamente.</p>
             </div>
             <button class="btn btn-primary" onclick="saveOrigins()">Guardar Origenes</button>
-            <div id="env-origins-note" style="margin-top: 1rem;"></div>
           </div>
         </div>
 
@@ -426,10 +438,16 @@ export function adminDashboardHTML() {
           document.getElementById('new-origin-input').value = data.config.allowedOrigins || '';
           updateAccessUI();
 
-          // Show env origins if any
-          const envNote = document.getElementById('env-origins-note');
+          // Show env origins as chips
+          const envSection = document.getElementById('env-origins-section');
+          const envChips = document.getElementById('env-origins-chips');
           if (data.envOrigins && data.envOrigins.length > 0) {
-            envNote.innerHTML = '<p class="empty">Origenes de env vars: ' + data.envOrigins.join(', ') + '</p>';
+            envSection.style.display = 'block';
+            envChips.innerHTML = data.envOrigins.map(o =>
+              '<span class="chip" style="background: #1e3a5f; border: 1px solid #3b82f6;">' + o + ' <span style="opacity: 0.5; font-size: 0.7rem;">ENV</span></span>'
+            ).join('');
+          } else {
+            envSection.style.display = 'none';
           }
         }
 
