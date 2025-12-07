@@ -7,7 +7,6 @@ import { chat } from "./index.js";
 import { convertToModelMessages } from "ai";
 import { readFileSync } from "fs";
 import { randomUUID } from "crypto";
-import { adminDashboardHTML } from "./admin.js";
 import {
   initDb,
   createSession,
@@ -95,8 +94,17 @@ app.post("/api/chat", async (c) => {
 
   // Guardar el último mensaje del usuario
   const lastMessage = messages[messages.length - 1];
-  if (lastMessage?.role === "user") {
-    saveChatMessage(token!, "user", lastMessage.content);
+  if (lastMessage?.role === "user" && lastMessage.content) {
+    // El content puede ser string o array (formato multimodal)
+    const content = typeof lastMessage.content === "string"
+      ? lastMessage.content
+      : Array.isArray(lastMessage.content)
+        ? lastMessage.content.filter((p: any) => p.type === "text").map((p: any) => p.text).join("\n")
+        : null;
+
+    if (content) {
+      saveChatMessage(token!, "user", content);
+    }
   }
 
   // Stream la respuesta y capturar para guardar
@@ -216,9 +224,10 @@ app.post("/api/admin/config", adminAuth, async (c) => {
   return c.json({ success: true, config: getAllConfig() });
 });
 
-// Dashboard HTML
+// Dashboard HTML (archivo estático)
 app.get("/admin", adminAuth, (c) => {
-  return c.html(adminDashboardHTML());
+  const html = readFileSync("./client/dist/admin.html", "utf-8");
+  return c.html(html);
 });
 
 // ============ WIDGET ROUTES ============
