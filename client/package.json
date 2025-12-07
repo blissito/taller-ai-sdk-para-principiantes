@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run build:embed && cp dist-embed/embed.js dist/",
+    "build:embed": "vite build --config vite.embed.config.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

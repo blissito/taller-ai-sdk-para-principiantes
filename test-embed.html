@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Embed - Sitio Host</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+      }
+      .hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 20px;
+        text-align: center;
+      }
+      .hero h1 {
+        font-size: 3rem;
+        margin-bottom: 10px;
+      }
+      .hero p {
+        font-size: 1.25rem;
+        opacity: 0.9;
+      }
+      .content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+      .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .card h2 {
+        margin-top: 0;
+        color: #1f2937;
+      }
+      .card p {
+        color: #6b7280;
+      }
+      .controls {
+        background: #f3f4f6;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+      }
+      .controls h3 {
+        margin-top: 0;
+      }
+      button {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-right: 10px;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #2563eb;
+      }
+      button.secondary {
+        background: #6b7280;
+      }
+      button.secondary:hover {
+        background: #4b5563;
+      }
+      footer {
+        text-align: center;
+        padding: 40px;
+        background: #1f2937;
+        color: #9ca3af;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <h1>Sitio Web de Ejemplo</h1>
+      <p>Este es un sitio host donde se embebe el widget de chat</p>
+    </div>
+
+    <div class="content">
+      <div class="controls">
+        <h3>Controles del Widget (API)</h3>
+        <p>Usa estos botones para controlar el widget programaticamente:</p>
+        <button onclick="ChatWidget.open()">Abrir Sidebar</button>
+        <button onclick="ChatWidget.expand()">Expandir 100%</button>
+        <button class="secondary" onclick="ChatWidget.close()">Cerrar</button>
+        <button class="secondary" onclick="ChatWidget.toggle()">Toggle</button>
+        <p style="margin-top: 10px; font-size: 12px; color: #6b7280">
+          Estado actual: <code id="state">closed</code>
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Contenido del Sitio</h2>
+        <p>
+          Este contenido se comprime cuando el sidebar del chat se abre. Observa
+          cómo el layout se ajusta automáticamente.
+        </p>
+        <p>
+          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
+          eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad
+          minim veniam, quis nostrud exercitation ullamco laboris.
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Sección de Cursos</h2>
+        <p>
+          Explora nuestra oferta de cursos y talleres sobre desarrollo web,
+          inteligencia artificial y más.
+        </p>
+        <ul>
+          <li>Curso de AI SDK con Claude</li>
+          <li>React Avanzado</li>
+          <li>Node.js y APIs</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Información de Contacto</h2>
+        <p>
+          Puedes contactarnos a través del chat widget en la esquina inferior
+          derecha, o usando los botones de arriba para controlar el widget.
+        </p>
+      </div>
+    </div>
+
+    <footer>
+      <p>
+        Este es un ejemplo de cómo embeber el chat widget en cualquier sitio web
+      </p>
+    </footer>
+
+    <!-- Script del Chat Widget -->
+    <script src="http://localhost:3000/embed.js"></script>
+
+    <script>
+      // Actualizar el estado mostrado cada segundo
+      setInterval(() => {
+        if (window.ChatWidget) {
+          document.getElementById("state").textContent = ChatWidget.getState();
+        }
+      }, 500);
+    </script>
+  </body>
+</html>
