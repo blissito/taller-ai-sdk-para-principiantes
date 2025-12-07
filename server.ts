@@ -2,10 +2,12 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { basicAuth } from "hono/basic-auth";
 import { chat } from "./index.js";
 import { convertToModelMessages } from "ai";
 import { readFileSync } from "fs";
 import { randomUUID } from "crypto";
+import { adminDashboardHTML } from "./admin.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const app = new Hono();
@@ -13,6 +15,8 @@ const app = new Hono();
 // Configuración de orígenes permitidos
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS?.split(",") || [];
 const isDev = process.env.NODE_ENV !== "production";
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASS = process.env.ADMIN_PASS || "admin123";
 
 // Tokens de sesión temporales (en producción usar Redis)
 const sessionTokens = new Map<string, { origin: string; expires: number }>();
@@ -40,6 +44,32 @@ app.post("/api/chat", async (c) => {
   const { messages } = await c.req.json();
   return chat(convertToModelMessages(messages)).toUIMessageStreamResponse();
 });
+
+// ============ ADMIN ROUTES ============
+const adminAuth = basicAuth({ username: ADMIN_USER, password: ADMIN_PASS });
+
+// API para estadísticas del admin
+app.get("/api/admin/stats", adminAuth, (c) => {
+  const sessions = Array.from(sessionTokens.entries()).map(([token, data]) => ({
+    token: token.slice(0, 8) + "...",
+    origin: data.origin,
+    expiresIn: Math.round((data.expires - Date.now()) / 60000) + " min",
+  }));
+
+  return c.json({
+    activeSessions: sessionTokens.size,
+    sessions,
+    allowedOrigins: ALLOWED_ORIGINS,
+    isDev,
+  });
+});
+
+// Dashboard HTML
+app.get("/admin", adminAuth, (c) => {
+  return c.html(adminDashboardHTML());
+});
+
+// ============ WIDGET ROUTES ============
 
 // Ruta del widget (iframe)
 app.get("/widget", (c) => {
