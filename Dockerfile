@@ -30,6 +30,9 @@ COPY --from=builder /app/client/dist ./client/dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json .
 
+# Asegurar que los archivos sean legibles por el usuario hono
+RUN chmod -R o+r ./client/dist && chown -R 1001 ./client/dist
+
 USER hono
 
 EXPOSE 3000
