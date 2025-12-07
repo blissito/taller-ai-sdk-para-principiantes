@@ -32,11 +32,25 @@ interface ChatWidgetAPI {
   let iframe: HTMLIFrameElement;
   let toggleBtn: HTMLButtonElement;
   let expandBtn: HTMLButtonElement;
+  let resizeHandle: HTMLDivElement;
+  let isResizing = false;
+  let currentWidth = 380;
 
-  const SIDEBAR_WIDTH = 380;
+  const DEFAULT_SIDEBAR_WIDTH = 380;
+  const MIN_SIDEBAR_WIDTH = 280;
+  const MAX_SIDEBAR_WIDTH = 800;
+  const STEP_SIZE = 50; // Saltos de 50px para sensación de "snap"
   const TRANSITION = "all 0.3s ease-in-out";
 
   function init() {
+    // Cargar ancho guardado del localStorage
+    const savedWidth = localStorage.getItem("chat-widget-width");
+    if (savedWidth) {
+      currentWidth = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, parseInt(savedWidth, 10)));
+    } else {
+      currentWidth = DEFAULT_SIDEBAR_WIDTH;
+    }
+
     // Crear wrapper que envuelve todo el contenido del body
     wrapper = document.createElement("div");
     wrapper.id = "chat-widget-wrapper";
@@ -77,10 +91,90 @@ interface ChatWidgetAPI {
       background: #fff;
       box-shadow: -2px 0 10px rgba(0,0,0,0.1);
       transition: ${TRANSITION};
-      overflow: hidden;
+      overflow: visible;
       display: flex;
       flex-direction: column;
     `;
+
+    // Crear resize handle (barra vertical en el borde izquierdo)
+    resizeHandle = document.createElement("div");
+    resizeHandle.id = "chat-widget-resize-handle";
+    resizeHandle.style.cssText = `
+      position: absolute;
+      left: -3px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 6px;
+      height: 60px;
+      background: #d1d5db;
+      border-radius: 3px;
+      cursor: ew-resize;
+      z-index: 10;
+      opacity: 0.7;
+      transition: opacity 0.2s, background 0.2s;
+    `;
+    resizeHandle.onmouseover = () => {
+      resizeHandle.style.opacity = "1";
+      resizeHandle.style.background = "#3b82f6";
+    };
+    resizeHandle.onmouseout = () => {
+      if (!isResizing) {
+        resizeHandle.style.opacity = "0.6";
+        resizeHandle.style.background = "#d1d5db";
+      }
+    };
+
+    // Funciones de resize
+    const startResize = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      sidebar.style.transition = "none";
+      resizeHandle.style.opacity = "1";
+      resizeHandle.style.background = "#3b82f6";
+      document.body.style.cursor = "ew-resize";
+      document.body.style.userSelect = "none";
+      // Desactivar iframe para que no capture eventos del mouse
+      iframe.style.pointerEvents = "none";
+    };
+
+    const doResize = (e: MouseEvent | TouchEvent) => {
+      if (!isResizing) return;
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const rawWidth = window.innerWidth - clientX;
+      // Aplicar steps para sensación de "snap"
+      const snappedWidth = Math.round(rawWidth / STEP_SIZE) * STEP_SIZE;
+      if (snappedWidth >= MIN_SIDEBAR_WIDTH && snappedWidth <= MAX_SIDEBAR_WIDTH) {
+        if (snappedWidth !== currentWidth) {
+          currentWidth = snappedWidth;
+          sidebar.style.width = `${currentWidth}px`;
+        }
+      }
+    };
+
+    const stopResize = () => {
+      if (isResizing) {
+        isResizing = false;
+        sidebar.style.transition = TRANSITION;
+        resizeHandle.style.opacity = "0.7";
+        resizeHandle.style.background = "#d1d5db";
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        // Reactivar iframe
+        iframe.style.pointerEvents = "";
+        localStorage.setItem("chat-widget-width", currentWidth.toString());
+      }
+    };
+
+    // Mouse events - usar window para capturar incluso si el mouse sale del documento
+    resizeHandle.addEventListener("mousedown", startResize);
+    window.addEventListener("mousemove", doResize);
+    window.addEventListener("mouseup", stopResize);
+
+    // Touch events para móvil
+    resizeHandle.addEventListener("touchstart", startResize, { passive: false });
+    window.addEventListener("touchmove", doResize, { passive: false });
+    window.addEventListener("touchend", stopResize);
 
     // Crear barra de controles del sidebar
     const controls = document.createElement("div");
@@ -146,50 +240,55 @@ interface ChatWidgetAPI {
       border: none;
     `;
 
+    sidebar.appendChild(resizeHandle);
     sidebar.appendChild(controls);
     sidebar.appendChild(iframe);
 
-    // Crear botón flotante para abrir
-    const floatingBtn = document.createElement("button");
-    floatingBtn.id = "chat-widget-fab";
-    floatingBtn.innerHTML = `
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    // Crear tab lateral (estilo cajón/drawer)
+    const tabBtn = document.createElement("button");
+    tabBtn.id = "chat-widget-tab";
+    tabBtn.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
       </svg>
+      <span style="writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; font-weight: 500; letter-spacing: 0.5px;">Chat</span>
     `;
-    floatingBtn.style.cssText = `
+    tabBtn.style.cssText = `
       position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      padding: 12px 6px;
       background: #3b82f6;
       color: white;
       border: none;
+      border-radius: 8px 0 0 8px;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+      box-shadow: -2px 0 8px rgba(0,0,0,0.15);
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
+      gap: 8px;
       transition: ${TRANSITION};
       z-index: 9999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     `;
-    floatingBtn.onmouseover = () => {
-      floatingBtn.style.transform = "scale(1.1)";
-      floatingBtn.style.boxShadow = "0 6px 16px rgba(59, 130, 246, 0.5)";
+    tabBtn.onmouseover = () => {
+      tabBtn.style.width = "36px";
+      tabBtn.style.background = "#2563eb";
     };
-    floatingBtn.onmouseout = () => {
-      floatingBtn.style.transform = "scale(1)";
-      floatingBtn.style.boxShadow = "0 4px 12px rgba(59, 130, 246, 0.4)";
+    tabBtn.onmouseout = () => {
+      tabBtn.style.width = "32px";
+      tabBtn.style.background = "#3b82f6";
     };
-    floatingBtn.onclick = () => ChatWidget.toggle();
+    tabBtn.onclick = () => ChatWidget.toggle();
 
     // Ensamblar
     wrapper.appendChild(hostContent);
     wrapper.appendChild(sidebar);
     document.body.appendChild(wrapper);
-    document.body.appendChild(floatingBtn);
+    document.body.appendChild(tabBtn);
 
     // Estilos base del body
     document.body.style.margin = "0";
@@ -197,19 +296,21 @@ interface ChatWidgetAPI {
   }
 
   function updateUI() {
-    const fab = document.getElementById("chat-widget-fab") as HTMLButtonElement;
+    const tab = document.getElementById("chat-widget-tab") as HTMLButtonElement;
 
     switch (state) {
       case "closed":
         sidebar.style.width = "0";
         hostContent.style.flex = "1";
-        if (fab) fab.style.display = "flex";
+        if (tab) tab.style.display = "flex";
+        resizeHandle.style.display = "none";
         break;
 
       case "sidebar":
-        sidebar.style.width = `${SIDEBAR_WIDTH}px`;
+        sidebar.style.width = `${currentWidth}px`;
         hostContent.style.flex = "1";
-        if (fab) fab.style.display = "none";
+        if (tab) tab.style.display = "none";
+        resizeHandle.style.display = "block";
         expandBtn.innerHTML = "⛶";
         expandBtn.title = "Expandir";
         break;
@@ -219,7 +320,8 @@ interface ChatWidgetAPI {
         hostContent.style.flex = "0";
         hostContent.style.width = "0";
         hostContent.style.overflow = "hidden";
-        if (fab) fab.style.display = "none";
+        if (tab) tab.style.display = "none";
+        resizeHandle.style.display = "none";
         expandBtn.innerHTML = "⛶";
         expandBtn.title = "Contraer";
         break;
