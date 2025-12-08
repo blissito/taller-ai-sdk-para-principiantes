@@ -246,6 +246,124 @@ app.get("/admin", adminAuth, (c) => {
   return c.html(html);
 });
 
+// Preview: página de prueba con el widget embebido
+app.get("/preview", adminAuth, (c) => {
+  const serverUrl = `${c.req.header("X-Forwarded-Proto") || "http"}://${c.req.header("Host")}`;
+  const html = `<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preview - Chat Widget</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+      }
+      .hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 20px;
+        text-align: center;
+      }
+      .hero h1 { font-size: 2.5rem; margin-bottom: 10px; }
+      .hero p { font-size: 1.1rem; opacity: 0.9; }
+      .content {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+      }
+      .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .card h2 { margin-top: 0; color: #1f2937; }
+      .card p { color: #6b7280; }
+      .controls {
+        background: #f3f4f6;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+      }
+      .controls h3 { margin-top: 0; }
+      button {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-right: 10px;
+        font-size: 14px;
+      }
+      button:hover { background: #2563eb; }
+      button.secondary { background: #6b7280; }
+      button.secondary:hover { background: #4b5563; }
+      footer {
+        text-align: center;
+        padding: 40px;
+        background: #1f2937;
+        color: #9ca3af;
+      }
+      .back-link {
+        display: inline-block;
+        margin-top: 15px;
+        color: rgba(255,255,255,0.8);
+        text-decoration: none;
+      }
+      .back-link:hover { color: white; }
+    </style>
+  </head>
+  <body>
+    <div class="hero">
+      <h1>Preview del Widget</h1>
+      <p>Pagina de prueba para previsualizar el agente</p>
+      <a href="/admin" class="back-link">← Volver al Admin</a>
+    </div>
+    <div class="content">
+      <div class="controls">
+        <h3>Controles del Widget (API)</h3>
+        <p>Usa estos botones para controlar el widget programaticamente:</p>
+        <button onclick="ChatWidget.open()">Abrir Sidebar</button>
+        <button onclick="ChatWidget.expand()">Expandir 100%</button>
+        <button class="secondary" onclick="ChatWidget.close()">Cerrar</button>
+        <button class="secondary" onclick="ChatWidget.toggle()">Toggle</button>
+        <p style="margin-top: 10px; font-size: 12px; color: #6b7280">
+          Estado actual: <code id="state">closed</code>
+        </p>
+      </div>
+      <div class="card">
+        <h2>Contenido de Ejemplo</h2>
+        <p>Este contenido se comprime cuando el sidebar del chat se abre. Observa como el layout se ajusta automaticamente.</p>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+      </div>
+      <div class="card">
+        <h2>Prueba el Chat</h2>
+        <p>Haz clic en el boton flotante en la esquina inferior derecha para abrir el chat y probar tu agente.</p>
+      </div>
+    </div>
+    <footer>
+      <p>Preview del Chat Widget - <a href="/admin" style="color: #60a5fa;">Volver al Admin</a></p>
+    </footer>
+    <script src="${serverUrl}/embed.js"></script>
+    <script>
+      setInterval(() => {
+        if (window.ChatWidget) {
+          document.getElementById("state").textContent = ChatWidget.getState();
+        }
+      }, 500);
+    </script>
+  </body>
+</html>`;
+  return c.html(html);
+});
+
 // ============ WIDGET ROUTES ============
 
 // Ruta del widget (iframe)
@@ -264,10 +382,12 @@ app.get("/widget", (c) => {
   }
 
   const publicMode = isPublicAccess();
-  console.log(`[Widget] Origin: ${clientOrigin || "(vacío)"} | Público: ${publicMode}`);
+  const host = c.req.header("Host") || "";
+  const isFromPreview = clientOrigin && (clientOrigin.includes(host) || clientOrigin.includes("localhost"));
+  console.log(`[Widget] Origin: ${clientOrigin || "(vacío)"} | Público: ${publicMode} | Preview: ${isFromPreview}`);
 
-  // Validar origen: público, dev, o en lista de permitidos
-  const isAllowed = publicMode || isDev || isOriginAllowed(clientOrigin);
+  // Validar origen: público, dev, preview del mismo servidor, o en lista de permitidos
+  const isAllowed = publicMode || isDev || isFromPreview || isOriginAllowed(clientOrigin);
 
   if (!isAllowed) {
     const allowedList = getAllowedOrigins();

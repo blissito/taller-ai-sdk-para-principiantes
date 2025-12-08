@@ -438,30 +438,39 @@
       <!-- Config Tab -->
       <div id="tab-config" class="tab-content">
         <div class="grid">
-          <div class="card" style="grid-column: span 2">
+          <div class="card">
             <h2>Control de Acceso</h2>
             <div id="access-alert"></div>
 
-            <div class="toggle-container" style="margin-bottom: 1.5rem">
-              <label class="toggle">
-                <input type="checkbox" id="public-access-toggle" />
-                <span class="toggle-slider"></span>
-              </label>
-              <div>
-                <span id="public-access-label" class="toggle-label"
-                  >Acceso Publico</span
-                >
-                <p
-                  style="
-                    color: #64748b;
-                    font-size: 0.75rem;
-                    margin-top: 0.25rem;
-                  "
-                >
-                  Cuando esta activo, cualquier sitio web puede usar tu widget
-                  (CORS *)
-                </p>
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
+              <div class="toggle-container">
+                <label class="toggle">
+                  <input type="checkbox" id="public-access-toggle" />
+                  <span class="toggle-slider"></span>
+                </label>
+                <div>
+                  <span id="public-access-label" class="toggle-label"
+                    >Acceso Publico</span
+                  >
+                  <p
+                    style="
+                      color: #64748b;
+                      font-size: 0.75rem;
+                      margin-top: 0.25rem;
+                    "
+                  >
+                    Cuando esta activo, cualquier sitio web puede usar tu widget
+                    (CORS *)
+                  </p>
+                </div>
               </div>
+              <a href="/preview" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Preview
+              </a>
             </div>
 
             <h3
