@@ -184,6 +184,9 @@ app.get("/api/admin/stats", adminAuth, (c) => {
     allowedOrigins: getAllowedOrigins(),
     envOrigins: ENV_ALLOWED_ORIGINS,
     isDev,
+    hasApiKey: !!config.openai_api_key || !!process.env.OPENAI_API_KEY,
+    apiKeySource: config.openai_api_key ? "db" : (process.env.OPENAI_API_KEY ? "env" : null),
+    model: config.model || "gpt-4o-mini",
     config: {
       publicAccess: config.public_access === "true",
       allowedOrigins: config.allowed_origins || "",
@@ -219,6 +222,19 @@ app.post("/api/admin/config", adminAuth, async (c) => {
       .join(",");
     setConfig("allowed_origins", origins);
     console.log(`[Config] Orígenes actualizados: ${origins || "(ninguno)"}`);
+  }
+
+  if (typeof body.openaiApiKey === "string" && body.openaiApiKey.startsWith("sk-")) {
+    setConfig("openai_api_key", body.openaiApiKey);
+    console.log(`[Config] API Key de OpenAI actualizada`);
+  }
+
+  if (typeof body.model === "string") {
+    const validModels = ["gpt-4o-mini", "gpt-4.1-mini", "gpt-5-nano", "o4-mini"];
+    if (validModels.includes(body.model)) {
+      setConfig("model", body.model);
+      console.log(`[Config] Modelo actualizado: ${body.model}`);
+    }
   }
 
   return c.json({ success: true, config: getAllConfig() });

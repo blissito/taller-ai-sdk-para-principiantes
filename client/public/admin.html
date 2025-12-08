@@ -523,16 +523,61 @@
 
           <div class="card">
             <h2>Modelo</h2>
+            <div id="model-alert"></div>
             <div class="form-group">
               <label>Selecciona el modelo de IA</label>
-              <select disabled>
-                <option selected>gpt-4o-mini-2024-07-18</option>
-                <option>gpt-4.1-mini</option>
-                <option>gpt-4o</option>
-                <option>claude-sonnet-4-20250514</option>
+              <select id="model-select">
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                <option value="gpt-5-nano">GPT-5 Nano (ultra rápido)</option>
+                <option value="o4-mini">O4 Mini (razonamiento)</option>
               </select>
             </div>
-            <p class="empty">Proximamente: cambio de modelo en caliente</p>
+            <button class="btn btn-primary" id="save-model-btn">Guardar Modelo</button>
+          </div>
+
+          <div class="card">
+            <h2>API Key de OpenAI</h2>
+            <div id="apikey-alert"></div>
+            <div class="form-group">
+              <label>Tu clave de API de OpenAI</label>
+              <div style="position: relative">
+                <input
+                  type="password"
+                  id="openai-api-key"
+                  placeholder="sk-..."
+                  style="font-family: monospace; padding-right: 3rem"
+                />
+                <button
+                  type="button"
+                  id="toggle-apikey-visibility"
+                  style="
+                    position: absolute;
+                    right: 0.5rem;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    background: transparent;
+                    border: none;
+                    color: #64748b;
+                    cursor: pointer;
+                    padding: 0.25rem;
+                  "
+                >
+                  <svg id="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+              </div>
+              <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.5rem">
+                Se guarda encriptada en la base de datos. Puedes obtener una en
+                <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #3b82f6">platform.openai.com</a>
+              </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center">
+              <button class="btn btn-primary" id="save-apikey-btn">Guardar API Key</button>
+              <span id="apikey-status" style="font-size: 0.75rem; color: #64748b"></span>
+            </div>
           </div>
 
           <div class="card">
@@ -744,21 +789,27 @@
       // State
       let currentConfig = { publicAccess: false, allowedOrigins: "" };
 
-      // Tab switching
-      document.querySelectorAll(".tab").forEach((tab) => {
-        tab.addEventListener("click", () => {
-          document
-            .querySelectorAll(".tab")
-            .forEach((t) => t.classList.remove("active"));
-          document
-            .querySelectorAll(".tab-content")
-            .forEach((c) => c.classList.remove("active"));
+      // Tab switching with localStorage persistence
+      function switchTab(tabName) {
+        document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
+        document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
+        const tab = document.querySelector(`.tab[data-tab="${tabName}"]`);
+        if (tab) {
           tab.classList.add("active");
-          document
-            .getElementById("tab-" + tab.dataset.tab)
-            .classList.add("active");
-        });
+          document.getElementById("tab-" + tabName).classList.add("active");
+          localStorage.setItem("admin_active_tab", tabName);
+        }
+      }
+
+      document.querySelectorAll(".tab").forEach((tab) => {
+        tab.addEventListener("click", () => switchTab(tab.dataset.tab));
       });
+
+      // Restore last active tab
+      const savedTab = localStorage.getItem("admin_active_tab");
+      if (savedTab) {
+        switchTab(savedTab);
+      }
 
       // Copy origin to clipboard
       function copyOrigin(origin, btn) {
@@ -999,6 +1050,15 @@
             ? '<span class="badge badge-yellow">Desarrollo</span>'
             : '<span class="badge badge-green">Produccion</span>';
 
+          // API key status
+          updateApiKeyStatus(data.hasApiKey, data.apiKeySource);
+
+          // Model select
+          const modelSelect = document.getElementById("model-select");
+          if (data.model) {
+            modelSelect.value = data.model;
+          }
+
           // Sessions list
           const listEl = document.getElementById("sessions-list");
           if (data.sessions.length === 0) {
@@ -1063,6 +1123,105 @@
           }, 2000);
         });
       });
+
+      // Save model
+      document
+        .getElementById("save-model-btn")
+        .addEventListener("click", async () => {
+          const select = document.getElementById("model-select");
+          const model = select.value;
+          const alertEl = document.getElementById("model-alert");
+
+          try {
+            const res = await fetch("/api/admin/config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ model }),
+            });
+
+            if (res.ok) {
+              alertEl.innerHTML = '<div class="alert alert-success">Modelo guardado correctamente</div>';
+              setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+            } else {
+              alertEl.innerHTML = '<div class="alert alert-warning">Error al guardar</div>';
+              setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+            }
+          } catch (err) {
+            console.error("Error:", err);
+            alertEl.innerHTML = '<div class="alert alert-warning">Error de conexion</div>';
+            setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+          }
+        });
+
+      // Toggle API key visibility
+      document
+        .getElementById("toggle-apikey-visibility")
+        .addEventListener("click", () => {
+          const input = document.getElementById("openai-api-key");
+          const icon = document.getElementById("eye-icon");
+          if (input.type === "password") {
+            input.type = "text";
+            icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+          } else {
+            input.type = "password";
+            icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+          }
+        });
+
+      // Save API key
+      document
+        .getElementById("save-apikey-btn")
+        .addEventListener("click", async () => {
+          const input = document.getElementById("openai-api-key");
+          const apiKey = input.value.trim();
+          const alertEl = document.getElementById("apikey-alert");
+
+          if (!apiKey) {
+            alertEl.innerHTML = '<div class="alert alert-warning">Ingresa una API key</div>';
+            setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+            return;
+          }
+
+          if (!apiKey.startsWith("sk-")) {
+            alertEl.innerHTML = '<div class="alert alert-warning">La API key debe comenzar con sk-</div>';
+            setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+            return;
+          }
+
+          try {
+            const res = await fetch("/api/admin/config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ openaiApiKey: apiKey }),
+            });
+
+            if (res.ok) {
+              alertEl.innerHTML = '<div class="alert alert-success">API Key guardada correctamente</div>';
+              input.value = "";
+              updateApiKeyStatus(true, "db");
+              setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+            } else {
+              alertEl.innerHTML = '<div class="alert alert-warning">Error al guardar</div>';
+              setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+            }
+          } catch (err) {
+            console.error("Error:", err);
+            alertEl.innerHTML = '<div class="alert alert-warning">Error de conexion</div>';
+            setTimeout(() => { alertEl.innerHTML = ""; }, 3000);
+          }
+        });
+
+      // Update API key status indicator
+      function updateApiKeyStatus(hasKey, source) {
+        const statusEl = document.getElementById("apikey-status");
+        if (hasKey && source === "db") {
+          statusEl.innerHTML = '<span class="chip" style="background: #166534; color: #86efac;">sk-******* <span style="opacity: 0.7; font-size: 0.7rem;">DB</span></span>';
+        } else if (hasKey && source === "env") {
+          statusEl.innerHTML = '<span class="chip" style="background: #1e3a5f; border: 1px solid #3b82f6;">sk-******* <span style="opacity: 0.7; font-size: 0.7rem;">ENV</span></span>';
+        } else {
+          statusEl.innerHTML = '<span style="color: #ef4444;">● No configurada</span>';
+        }
+      }
 
       // Initial load
       loadStats();
