@@ -208,8 +208,10 @@
       .toggle {
         position: relative;
         width: 56px;
+        min-width: 56px;
         height: 28px;
         cursor: pointer;
+        flex-shrink: 0;
       }
       .toggle input {
         opacity: 0;
@@ -317,6 +319,121 @@
       .tab-content.active {
         display: block;
       }
+
+      /* Tools styles */
+      .tool-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 1rem !important;
+        gap: 1rem;
+      }
+      .tool-item .tool-info {
+        flex: 1;
+      }
+      .tool-item .tool-name {
+        font-weight: 600;
+        color: #f8fafc;
+      }
+      .tool-item .tool-title {
+        color: #94a3b8;
+        font-size: 0.875rem;
+        margin-left: 0.5rem;
+      }
+      .tool-item .tool-endpoint {
+        color: #64748b;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+      }
+      .tool-item .tool-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+      }
+      .tool-item .tool-actions button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+      }
+      .btn-danger {
+        background: #dc2626;
+        color: white;
+      }
+      .btn-danger:hover {
+        background: #b91c1c;
+      }
+      .badge-enabled {
+        background: #166534;
+        color: #86efac;
+      }
+      .badge-disabled {
+        background: #44403c;
+        color: #a8a29e;
+      }
+
+      /* Params Builder */
+      .param-row {
+        display: grid;
+        grid-template-columns: 1fr 120px 2fr auto auto;
+        gap: 0.5rem;
+        align-items: start;
+        padding: 0.75rem;
+        background: #0f172a;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+      }
+      .param-row input,
+      .param-row select {
+        width: 100%;
+        padding: 0.5rem;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        color: #e2e8f0;
+        font-size: 0.8rem;
+      }
+      .param-row input:focus,
+      .param-row select:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+      .param-row input::placeholder {
+        color: #64748b;
+      }
+      .param-row .required-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 0.5rem 0;
+      }
+      .param-row .required-toggle input {
+        width: auto;
+        margin: 0;
+      }
+      .param-row .btn-remove {
+        background: transparent;
+        border: none;
+        color: #ef4444;
+        cursor: pointer;
+        padding: 0.5rem;
+        font-size: 1rem;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+      }
+      .param-row .btn-remove:hover {
+        opacity: 1;
+      }
+      .param-header {
+        display: grid;
+        grid-template-columns: 1fr 120px 2fr auto auto;
+        gap: 0.5rem;
+        padding: 0 0.75rem 0.5rem;
+        font-size: 0.7rem;
+        color: #64748b;
+        text-transform: uppercase;
+      }
     </style>
   </head>
   <body>
@@ -345,6 +462,7 @@
         <button class="tab" data-tab="config">Configuracion</button>
         <button class="tab" data-tab="embed">Embeber</button>
         <button class="tab" data-tab="training">Entrenamiento</button>
+        <button class="tab" data-tab="tools">Herramientas</button>
       </div>
 
       <!-- Dashboard Tab -->
@@ -442,36 +560,26 @@
             <h2>Control de Acceso</h2>
             <div id="access-alert"></div>
 
-            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem;">
-              <div class="toggle-container">
-                <label class="toggle">
-                  <input type="checkbox" id="public-access-toggle" />
-                  <span class="toggle-slider"></span>
-                </label>
-                <div>
-                  <span id="public-access-label" class="toggle-label"
-                    >Acceso Publico</span
-                  >
-                  <p
-                    style="
-                      color: #64748b;
-                      font-size: 0.75rem;
-                      margin-top: 0.25rem;
-                    "
-                  >
-                    Cuando esta activo, cualquier sitio web puede usar tu widget
-                    (CORS *)
-                  </p>
-                </div>
+            <div class="toggle-container" style="margin-bottom: 1.5rem;">
+              <label class="toggle">
+                <input type="checkbox" id="public-access-toggle" />
+                <span class="toggle-slider"></span>
+              </label>
+              <div>
+                <span id="public-access-label" class="toggle-label">Acceso Publico</span>
+                <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem;">
+                  Cuando esta activo, cualquier sitio web puede usar tu widget (CORS *)
+                </p>
               </div>
-              <a href="/preview" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                Preview
-              </a>
             </div>
+
+            <a href="/preview" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              Preview
+            </a>
 
             <h3
               style="
@@ -775,6 +883,134 @@
             <p class="empty" style="margin-top: 1rem">
               Proximamente: RAG con embeddings para contexto personalizado
             </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tools Tab -->
+      <div id="tab-tools" class="tab-content">
+        <div class="grid">
+          <!-- Formulario de creacion/edicion -->
+          <div class="card" style="grid-column: span 2">
+            <h2 id="tools-form-title">Nueva Herramienta</h2>
+            <div id="tools-alert"></div>
+
+            <form id="tool-form">
+              <input type="hidden" id="tool-id" value="" />
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label>Nombre (identificador para AI)*</label>
+                  <input type="text" id="tool-name" placeholder="bookCourt" pattern="^[a-zA-Z][a-zA-Z0-9_]*$" required />
+                  <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem">
+                    Solo letras, numeros y guiones bajos. Ej: getWeather, createBooking
+                  </p>
+                </div>
+
+                <div class="form-group">
+                  <label>Titulo (human-readable)*</label>
+                  <input type="text" id="tool-title" placeholder="Reservar Cancha" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Descripcion (para el LLM)*</label>
+                <textarea id="tool-description" placeholder="Permite reservar una cancha de tenis especificando fecha, hora y tipo de cancha." required style="min-height: 80px;"></textarea>
+                <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem">
+                  El LLM usara esta descripcion para decidir cuando invocar la herramienta
+                </p>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label>URL del Endpoint*</label>
+                  <input type="url" id="tool-endpoint" placeholder="https://api.example.com/book" required />
+                </div>
+
+                <div class="form-group">
+                  <label>Metodo HTTP</label>
+                  <select id="tool-method">
+                    <option value="POST" selected>POST</option>
+                    <option value="GET">GET</option>
+                    <option value="PUT">PUT</option>
+                    <option value="PATCH">PATCH</option>
+                    <option value="DELETE">DELETE</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Headers (JSON)</label>
+                <textarea id="tool-headers" placeholder='{
+  "Authorization": "Bearer your-api-key",
+  "Content-Type": "application/json"
+}' style="min-height: 100px; font-family: monospace; font-size: 0.8rem; line-height: 1.4;"></textarea>
+                <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem">
+                  Headers personalizados para la request. Formato JSON.
+                </p>
+              </div>
+
+              <div class="form-group">
+                <label style="display: flex; justify-content: space-between; align-items: center;">
+                  <span>Parametros de Entrada*</span>
+                  <button type="button" id="add-param-btn" class="btn btn-secondary" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">+ Agregar</button>
+                </label>
+                <div id="params-builder" style="margin-top: 0.5rem;"></div>
+                <p id="no-params-msg" style="color: #64748b; font-size: 0.875rem; padding: 1rem; background: #0f172a; border-radius: 8px; text-align: center;">
+                  Sin parametros. Haz clic en "+ Agregar" para definir los datos que el LLM debe recopilar.
+                </p>
+                <input type="hidden" id="tool-schema" />
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                  <label>Timeout (ms)</label>
+                  <input type="number" id="tool-timeout" value="10000" min="1000" max="60000" />
+                </div>
+
+                <div class="form-group">
+                  <label>URL de Navegacion (opcional)</label>
+                  <input type="text" id="tool-navigation" placeholder="/reservas/{{bookingId}}" />
+                  <p style="color: #64748b; font-size: 0.75rem; margin-top: 0.25rem">
+                    URL para redirigir al usuario despues de ejecutar
+                  </p>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 1.5rem; margin: 1rem 0;">
+                <div class="toggle-container">
+                  <label class="toggle">
+                    <input type="checkbox" id="tool-enabled" checked />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">Habilitada</span>
+                </div>
+
+                <div class="toggle-container">
+                  <label class="toggle">
+                    <input type="checkbox" id="tool-confirmation" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <span class="toggle-label">Requiere confirmacion</span>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-primary" id="tool-submit-btn">Crear Herramienta</button>
+                <button type="button" class="btn btn-secondary" id="tool-cancel-btn" style="display: none;">Cancelar</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Lista de herramientas -->
+          <div class="card" style="grid-column: span 2">
+            <h2>Herramientas Configuradas</h2>
+            <p style="color: #64748b; font-size: 0.875rem; margin-bottom: 1rem;">
+              Herramientas disponibles para el agente AI. El LLM puede invocarlas durante la conversacion.
+            </p>
+            <ul class="list" id="tools-list">
+              <li class="empty">Cargando...</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -1236,6 +1472,410 @@
       loadStats();
       generateEmbedCode();
       setInterval(loadStats, 10000);
+
+      // ============ TOOLS MANAGEMENT ============
+
+      let editingToolId = null;
+      let toolsCache = [];
+      let paramsData = []; // Visual params builder data
+
+      // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
+      // Show alert in tools tab
+      function showToolAlert(message, type) {
+        const alertEl = document.getElementById("tools-alert");
+        alertEl.innerHTML = `<div class="alert alert-${type}">${escapeHtml(message)}</div>`;
+        setTimeout(() => { alertEl.innerHTML = ""; }, 4000);
+      }
+
+      // Validate JSON
+      function isValidJson(str) {
+        if (!str || !str.trim()) return true;
+        try {
+          JSON.parse(str);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      // ============ PARAMS BUILDER ============
+
+      function renderParamsBuilder() {
+        const container = document.getElementById("params-builder");
+        const noParamsMsg = document.getElementById("no-params-msg");
+
+        if (paramsData.length === 0) {
+          container.innerHTML = "";
+          noParamsMsg.style.display = "block";
+          return;
+        }
+
+        noParamsMsg.style.display = "none";
+
+        let html = `<div class="param-header">
+          <span>Nombre</span>
+          <span>Tipo</span>
+          <span>Descripcion</span>
+          <span>Req.</span>
+          <span></span>
+        </div>`;
+
+        paramsData.forEach((param, index) => {
+          html += `
+            <div class="param-row" data-index="${index}">
+              <input type="text" class="param-name" placeholder="fecha" value="${escapeHtml(param.name || "")}" />
+              <select class="param-type">
+                <option value="string" ${param.type === "string" ? "selected" : ""}>string</option>
+                <option value="number" ${param.type === "number" ? "selected" : ""}>number</option>
+                <option value="boolean" ${param.type === "boolean" ? "selected" : ""}>boolean</option>
+                <option value="integer" ${param.type === "integer" ? "selected" : ""}>integer</option>
+              </select>
+              <input type="text" class="param-desc" placeholder="Fecha en formato YYYY-MM-DD" value="${escapeHtml(param.description || "")}" />
+              <label class="required-toggle">
+                <input type="checkbox" class="param-required" ${param.required ? "checked" : ""} />
+              </label>
+              <button type="button" class="btn-remove" onclick="removeParam(${index})">×</button>
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+
+        // Add event listeners
+        container.querySelectorAll(".param-row").forEach((row) => {
+          const index = parseInt(row.dataset.index);
+          row.querySelector(".param-name").addEventListener("input", (e) => {
+            paramsData[index].name = e.target.value;
+            updateSchemaFromParams();
+          });
+          row.querySelector(".param-type").addEventListener("change", (e) => {
+            paramsData[index].type = e.target.value;
+            updateSchemaFromParams();
+          });
+          row.querySelector(".param-desc").addEventListener("input", (e) => {
+            paramsData[index].description = e.target.value;
+            updateSchemaFromParams();
+          });
+          row.querySelector(".param-required").addEventListener("change", (e) => {
+            paramsData[index].required = e.target.checked;
+            updateSchemaFromParams();
+          });
+        });
+      }
+
+      function addParam() {
+        paramsData.push({ name: "", type: "string", description: "", required: true });
+        renderParamsBuilder();
+        // Focus the new row's name input
+        const rows = document.querySelectorAll(".param-row");
+        if (rows.length > 0) {
+          rows[rows.length - 1].querySelector(".param-name").focus();
+        }
+      }
+
+      function removeParam(index) {
+        paramsData.splice(index, 1);
+        renderParamsBuilder();
+        updateSchemaFromParams();
+      }
+
+      function updateSchemaFromParams() {
+        const validParams = paramsData.filter(p => p.name && p.name.trim());
+        if (validParams.length === 0) {
+          document.getElementById("tool-schema").value = "";
+          return;
+        }
+
+        const schema = {
+          type: "object",
+          properties: {},
+          required: []
+        };
+
+        validParams.forEach(p => {
+          const name = p.name.trim();
+          schema.properties[name] = {
+            type: p.type,
+            description: p.description || undefined
+          };
+          if (p.required) {
+            schema.required.push(name);
+          }
+        });
+
+        if (schema.required.length === 0) {
+          delete schema.required;
+        }
+
+        document.getElementById("tool-schema").value = JSON.stringify(schema, null, 2);
+      }
+
+      function loadParamsFromSchema(schemaJson) {
+        paramsData = [];
+        if (!schemaJson) {
+          renderParamsBuilder();
+          return;
+        }
+
+        try {
+          const schema = JSON.parse(schemaJson);
+          if (schema.properties) {
+            const required = schema.required || [];
+            for (const [name, prop] of Object.entries(schema.properties)) {
+              paramsData.push({
+                name,
+                type: prop.type || "string",
+                description: prop.description || "",
+                required: required.includes(name)
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing schema:", e);
+        }
+
+        renderParamsBuilder();
+      }
+
+      // Add param button
+      document.getElementById("add-param-btn").addEventListener("click", addParam);
+
+      // Format JSON in headers textarea on blur
+      document.getElementById("tool-headers").addEventListener("blur", function() {
+        if (this.value.trim()) {
+          try {
+            const parsed = JSON.parse(this.value);
+            this.value = JSON.stringify(parsed, null, 2);
+          } catch (e) {
+            // Invalid JSON, leave as is
+          }
+        }
+      });
+
+      // Load tools list
+      async function loadTools() {
+        try {
+          const res = await fetch("/api/admin/tools", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ intent: "list" }),
+          });
+          if (res.status === 401) return;
+          const data = await res.json();
+          toolsCache = data.tools || [];
+
+          const listEl = document.getElementById("tools-list");
+          if (toolsCache.length === 0) {
+            listEl.innerHTML = '<li class="empty">No hay herramientas configuradas. Crea una usando el formulario de arriba.</li>';
+            return;
+          }
+
+          listEl.innerHTML = toolsCache.map(tool => `
+            <li class="tool-item">
+              <div class="tool-info">
+                <div>
+                  <span class="tool-name">${escapeHtml(tool.name)}</span>
+                  <span class="tool-title">- ${escapeHtml(tool.title)}</span>
+                  <span class="badge ${tool.enabled ? 'badge-enabled' : 'badge-disabled'}" style="margin-left: 0.5rem;">
+                    ${tool.enabled ? 'Activa' : 'Inactiva'}
+                  </span>
+                </div>
+                <div class="tool-endpoint">${tool.httpMethod} ${escapeHtml(tool.endpointUrl)}</div>
+              </div>
+              <div class="tool-actions">
+                <button class="btn btn-secondary" onclick="editTool('${tool.id}')">Editar</button>
+                <button class="btn btn-danger" onclick="deleteToolConfirm('${tool.id}')">Eliminar</button>
+              </div>
+            </li>
+          `).join("");
+        } catch (err) {
+          console.error("Error loading tools:", err);
+        }
+      }
+
+      // Edit tool - load into form
+      function editTool(id) {
+        const tool = toolsCache.find(t => t.id === id);
+        if (!tool) {
+          alert("Herramienta no encontrada");
+          return;
+        }
+
+        editingToolId = id;
+        document.getElementById("tool-id").value = id;
+        document.getElementById("tool-name").value = tool.name;
+        document.getElementById("tool-title").value = tool.title;
+        document.getElementById("tool-description").value = tool.description;
+        document.getElementById("tool-endpoint").value = tool.endpointUrl;
+        document.getElementById("tool-method").value = tool.httpMethod || "POST";
+
+        // Format headers JSON
+        const headers = tool.headersJson || "";
+        try {
+          document.getElementById("tool-headers").value = headers ? JSON.stringify(JSON.parse(headers), null, 2) : "";
+        } catch {
+          document.getElementById("tool-headers").value = headers;
+        }
+
+        // Load schema into params builder
+        document.getElementById("tool-schema").value = tool.inputSchemaJson || "";
+        loadParamsFromSchema(tool.inputSchemaJson);
+
+        document.getElementById("tool-timeout").value = tool.timeoutMs || 10000;
+        document.getElementById("tool-navigation").value = tool.navigationUrl || "";
+        document.getElementById("tool-enabled").checked = tool.enabled;
+        document.getElementById("tool-confirmation").checked = tool.requiresConfirmation;
+
+        document.getElementById("tools-form-title").textContent = "Editar Herramienta";
+        document.getElementById("tool-submit-btn").textContent = "Guardar Cambios";
+        document.getElementById("tool-cancel-btn").style.display = "inline-block";
+
+        document.getElementById("tab-tools").scrollIntoView({ behavior: "smooth" });
+      }
+
+      // Cancel edit - reset form
+      function cancelToolEdit() {
+        editingToolId = null;
+        document.getElementById("tool-form").reset();
+        document.getElementById("tool-id").value = "";
+        document.getElementById("tool-enabled").checked = true;
+        document.getElementById("tools-form-title").textContent = "Nueva Herramienta";
+        document.getElementById("tool-submit-btn").textContent = "Crear Herramienta";
+        document.getElementById("tool-cancel-btn").style.display = "none";
+
+        // Clear params builder
+        paramsData = [];
+        renderParamsBuilder();
+      }
+
+      // Delete tool with confirmation
+      async function deleteToolConfirm(id) {
+        const tool = toolsCache.find(t => t.id === id);
+        if (!confirm(`Seguro que deseas eliminar la herramienta "${tool?.name}"?`)) {
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/admin/tools", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ intent: "delete", id }),
+          });
+
+          if (res.ok) {
+            showToolAlert("Herramienta eliminada correctamente", "success");
+            loadTools();
+            if (editingToolId === id) {
+              cancelToolEdit();
+            }
+          } else {
+            const data = await res.json();
+            showToolAlert(data.error || "Error al eliminar", "warning");
+          }
+        } catch (err) {
+          console.error("Error deleting tool:", err);
+          showToolAlert("Error de conexion", "warning");
+        }
+      }
+
+      // Form submission
+      document.getElementById("tool-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById("tool-name").value.trim();
+        const title = document.getElementById("tool-title").value.trim();
+        const description = document.getElementById("tool-description").value.trim();
+        const endpointUrl = document.getElementById("tool-endpoint").value.trim();
+        const httpMethod = document.getElementById("tool-method").value;
+        const headersJson = document.getElementById("tool-headers").value.trim();
+        const inputSchemaJson = document.getElementById("tool-schema").value.trim();
+        const timeoutMs = parseInt(document.getElementById("tool-timeout").value) || 10000;
+        const navigationUrl = document.getElementById("tool-navigation").value.trim();
+        const enabled = document.getElementById("tool-enabled").checked;
+        const requiresConfirmation = document.getElementById("tool-confirmation").checked;
+
+        // Validations
+        if (!name || !title || !description || !endpointUrl) {
+          showToolAlert("Completa todos los campos requeridos (*)", "warning");
+          return;
+        }
+
+        // Check if at least one param with name exists
+        const validParams = paramsData.filter(p => p.name && p.name.trim());
+        if (validParams.length === 0) {
+          showToolAlert("Agrega al menos un parametro de entrada", "warning");
+          return;
+        }
+
+        if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(name)) {
+          showToolAlert("El nombre debe comenzar con letra y solo contener letras, numeros y _", "warning");
+          return;
+        }
+
+        if (headersJson && !isValidJson(headersJson)) {
+          showToolAlert("Los Headers no son JSON valido", "warning");
+          return;
+        }
+
+        const isEdit = !!editingToolId;
+        const payload = {
+          intent: isEdit ? "update" : "create",
+          id: editingToolId,
+          name,
+          title,
+          description,
+          endpointUrl,
+          httpMethod,
+          headersJson: headersJson || null,
+          inputSchemaJson,
+          timeoutMs,
+          navigationUrl: navigationUrl || null,
+          enabled,
+          requiresConfirmation,
+        };
+
+        try {
+          const res = await fetch("/api/admin/tools", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            showToolAlert(isEdit ? "Herramienta actualizada correctamente" : "Herramienta creada correctamente", "success");
+            cancelToolEdit();
+            loadTools();
+          } else {
+            showToolAlert(data.error || "Error al guardar", "warning");
+          }
+        } catch (err) {
+          console.error("Error saving tool:", err);
+          showToolAlert("Error de conexion", "warning");
+        }
+      });
+
+      // Cancel button handler
+      document.getElementById("tool-cancel-btn").addEventListener("click", cancelToolEdit);
+
+      // Load tools when switching to tools tab
+      document.querySelector('.tab[data-tab="tools"]').addEventListener("click", loadTools);
+
+      // Initial load if tools tab is active
+      if (localStorage.getItem("admin_active_tab") === "tools") {
+        loadTools();
+      }
+
+      // Initialize params builder on load
+      renderParamsBuilder();
     </script>
   </body>
 </html>

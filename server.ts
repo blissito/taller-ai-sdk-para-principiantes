@@ -26,6 +26,13 @@ import {
   getAllowedOriginsFromDb,
   setConfig,
   getAllConfig,
+  // Tools CRUD
+  getTool,
+  getToolByName,
+  getAllTools,
+  createTool,
+  updateTool,
+  deleteTool,
 } from "./db/index.js";
 
 // Inicializar base de datos
@@ -238,6 +245,95 @@ app.post("/api/admin/config", adminAuth, async (c) => {
   }
 
   return c.json({ success: true, config: getAllConfig() });
+});
+
+// API para gestión de herramientas (CRUD con intent)
+app.post("/api/admin/tools", adminAuth, async (c) => {
+  const { intent, ...data } = await c.req.json();
+
+  switch (intent) {
+    case "list":
+      return c.json({ tools: getAllTools() });
+
+    case "create": {
+      // Validaciones
+      if (!data.name || !data.title || !data.description || !data.endpointUrl || !data.inputSchemaJson) {
+        return c.json({ error: "Campos requeridos: name, title, description, endpointUrl, inputSchemaJson" }, 400);
+      }
+      if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(data.name)) {
+        return c.json({ error: "El nombre debe comenzar con letra y solo contener letras, números y _" }, 400);
+      }
+      try { JSON.parse(data.inputSchemaJson); } catch { return c.json({ error: "inputSchemaJson no es JSON válido" }, 400); }
+      if (data.headersJson) { try { JSON.parse(data.headersJson); } catch { return c.json({ error: "headersJson no es JSON válido" }, 400); } }
+      if (getToolByName(data.name)) {
+        return c.json({ error: "Ya existe una herramienta con ese nombre" }, 409);
+      }
+
+      const id = randomUUID();
+      createTool({
+        id,
+        name: data.name,
+        title: data.title,
+        description: data.description,
+        inputSchemaJson: data.inputSchemaJson,
+        outputSchemaJson: data.outputSchemaJson || undefined,
+        endpointUrl: data.endpointUrl,
+        httpMethod: data.httpMethod || "POST",
+        headersJson: data.headersJson || undefined,
+        timeoutMs: data.timeoutMs || 10000,
+        requiresConfirmation: data.requiresConfirmation || false,
+        navigationUrl: data.navigationUrl || undefined,
+        enabled: data.enabled !== false,
+      });
+      console.log(`[Tools] Herramienta creada: ${data.name}`);
+      return c.json({ success: true, id });
+    }
+
+    case "update": {
+      if (!data.id) return c.json({ error: "Se requiere id" }, 400);
+      const existing = getTool(data.id);
+      if (!existing) return c.json({ error: "Herramienta no encontrada" }, 404);
+
+      if (data.name && !/^[a-zA-Z][a-zA-Z0-9_]*$/.test(data.name)) {
+        return c.json({ error: "El nombre debe comenzar con letra y solo contener letras, números y _" }, 400);
+      }
+      if (data.inputSchemaJson) { try { JSON.parse(data.inputSchemaJson); } catch { return c.json({ error: "inputSchemaJson no es JSON válido" }, 400); } }
+      if (data.headersJson) { try { JSON.parse(data.headersJson); } catch { return c.json({ error: "headersJson no es JSON válido" }, 400); } }
+      if (data.name && data.name !== existing.name && getToolByName(data.name)) {
+        return c.json({ error: "Ya existe otra herramienta con ese nombre" }, 409);
+      }
+
+      updateTool(data.id, {
+        name: data.name,
+        title: data.title,
+        description: data.description,
+        inputSchemaJson: data.inputSchemaJson,
+        outputSchemaJson: data.outputSchemaJson,
+        endpointUrl: data.endpointUrl,
+        httpMethod: data.httpMethod,
+        headersJson: data.headersJson,
+        timeoutMs: data.timeoutMs,
+        requiresConfirmation: data.requiresConfirmation,
+        navigationUrl: data.navigationUrl,
+        enabled: data.enabled,
+      });
+      console.log(`[Tools] Herramienta actualizada: ${data.id}`);
+      return c.json({ success: true });
+    }
+
+    case "delete": {
+      if (!data.id) return c.json({ error: "Se requiere id" }, 400);
+      const existing = getTool(data.id);
+      if (!existing) return c.json({ error: "Herramienta no encontrada" }, 404);
+
+      deleteTool(data.id);
+      console.log(`[Tools] Herramienta eliminada: ${data.id} (${existing.name})`);
+      return c.json({ success: true });
+    }
+
+    default:
+      return c.json({ error: "Intent inválido. Use: list, create, update, delete" }, 400);
+  }
 });
 
 // Dashboard HTML (archivo estático)

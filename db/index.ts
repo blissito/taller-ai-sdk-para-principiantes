@@ -332,6 +332,144 @@ export function getAllowedOriginsFromDb(): string[] {
   return value.split(",").filter(Boolean);
 }
 
+// ============ Tools Operations ============
+
+export function createTool(data: {
+  id: string;
+  name: string;
+  title: string;
+  description: string;
+  inputSchemaJson: string;
+  outputSchemaJson?: string;
+  endpointUrl: string;
+  httpMethod?: string;
+  headersJson?: string;
+  timeoutMs?: number;
+  requiresConfirmation?: boolean;
+  navigationUrl?: string;
+  enabled?: boolean;
+}) {
+  return db
+    .insert(schema.tools)
+    .values({
+      id: data.id,
+      name: data.name,
+      title: data.title,
+      description: data.description,
+      inputSchemaJson: data.inputSchemaJson,
+      outputSchemaJson: data.outputSchemaJson,
+      endpointUrl: data.endpointUrl,
+      httpMethod: data.httpMethod || "POST",
+      headersJson: data.headersJson,
+      timeoutMs: data.timeoutMs || 10000,
+      requiresConfirmation: data.requiresConfirmation || false,
+      navigationUrl: data.navigationUrl,
+      enabled: data.enabled !== false,
+    })
+    .run();
+}
+
+export function getTool(id: string) {
+  const results = db
+    .select()
+    .from(schema.tools)
+    .where(eq(schema.tools.id, id))
+    .all();
+  return results[0] || null;
+}
+
+export function getToolByName(name: string) {
+  const results = db
+    .select()
+    .from(schema.tools)
+    .where(eq(schema.tools.name, name))
+    .all();
+  return results[0] || null;
+}
+
+export function getAllTools() {
+  return db.select().from(schema.tools).orderBy(schema.tools.createdAt).all();
+}
+
+export function getEnabledTools() {
+  return db
+    .select()
+    .from(schema.tools)
+    .where(eq(schema.tools.enabled, true))
+    .all();
+}
+
+export function updateTool(
+  id: string,
+  data: Partial<{
+    name: string;
+    title: string;
+    description: string;
+    inputSchemaJson: string;
+    outputSchemaJson: string | null;
+    endpointUrl: string;
+    httpMethod: string;
+    headersJson: string | null;
+    timeoutMs: number;
+    requiresConfirmation: boolean;
+    navigationUrl: string | null;
+    enabled: boolean;
+  }>
+) {
+  return db
+    .update(schema.tools)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(schema.tools.id, id))
+    .run();
+}
+
+export function deleteTool(id: string) {
+  return db.delete(schema.tools).where(eq(schema.tools.id, id)).run();
+}
+
+// ============ Tool Executions Operations ============
+
+export function logToolExecution(data: {
+  toolId: string;
+  sessionToken?: string;
+  inputJson: string;
+  outputJson?: string;
+  status: "success" | "error" | "timeout";
+  errorMessage?: string;
+  latencyMs: number;
+}) {
+  return db
+    .insert(schema.toolExecutions)
+    .values({
+      toolId: data.toolId,
+      sessionToken: data.sessionToken,
+      inputJson: data.inputJson,
+      outputJson: data.outputJson,
+      status: data.status,
+      errorMessage: data.errorMessage,
+      latencyMs: data.latencyMs,
+    })
+    .run();
+}
+
+export function getToolExecutions(toolId?: string, limit = 50) {
+  if (toolId) {
+    return db
+      .select()
+      .from(schema.toolExecutions)
+      .where(eq(schema.toolExecutions.toolId, toolId))
+      .orderBy(schema.toolExecutions.createdAt)
+      .limit(limit)
+      .all();
+  }
+  return db
+    .select()
+    .from(schema.toolExecutions)
+    .orderBy(schema.toolExecutions.createdAt)
+    .limit(limit)
+    .all();
+}
+
 // ============ Init ============
 
 export function initDb() {
@@ -375,6 +513,40 @@ export function initDb() {
       value TEXT NOT NULL,
       updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
     );
+
+    -- Tools table
+    CREATE TABLE IF NOT EXISTS tools (
+      id TEXT PRIMARY KEY,
+      name TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      input_schema_json TEXT NOT NULL,
+      output_schema_json TEXT,
+      endpoint_url TEXT NOT NULL,
+      http_method TEXT NOT NULL DEFAULT 'POST',
+      headers_json TEXT,
+      timeout_ms INTEGER NOT NULL DEFAULT 10000,
+      requires_confirmation INTEGER NOT NULL DEFAULT 0,
+      navigation_url TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000),
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
+
+    -- Tool executions table
+    CREATE TABLE IF NOT EXISTS tool_executions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool_id TEXT REFERENCES tools(id),
+      session_token TEXT,
+      input_json TEXT,
+      output_json TEXT,
+      status TEXT NOT NULL CHECK(status IN ('success', 'error', 'timeout')),
+      error_message TEXT,
+      latency_ms INTEGER,
+      created_at INTEGER NOT NULL DEFAULT (unixepoch() * 1000)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_tool_executions_tool ON tool_executions(tool_id);
   `);
 
   // Inicializar configuración por defecto
