@@ -1,22 +1,22 @@
-(function(){"use strict";(function(){const I=document.currentScript,S=new URL(I.src).origin;let l="closed",c,i,t,u,d,n,e,r,p,h=!1,o=380;const L=380,b=280,w=800,v=50,x="transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",E="margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)";function T(){const a=localStorage.getItem("chat-widget-width");for(a?o=Math.max(b,Math.min(w,parseInt(a,10))):o=L,c=document.createElement("div"),c.id="chat-widget-wrapper",c.style.cssText=`
+(function(){"use strict";(function(){const z=document.currentScript,S=new URL(z.src).origin;let l="closed",p,n,t,r,a,i,e,c,y,h=!1,s=380;const L=380,b=280,w=800,v=50,m="transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",E="margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1)";function T(){const o=localStorage.getItem("chat-widget-width");for(o?s=Math.max(b,Math.min(w,parseInt(o,10))):s=L,p=document.createElement("div"),p.id="chat-widget-wrapper",p.style.cssText=`
       display: flex;
       min-height: 100vh;
       width: 100%;
-    `,i=document.createElement("div"),i.id="chat-widget-host",i.style.cssText=`
+    `,n=document.createElement("div"),n.id="chat-widget-host",n.style.cssText=`
       flex: 1;
       min-width: 0;
       transition: ${E};
       overflow: auto;
       margin-right: 0;
-    `;document.body.firstChild&&document.body.firstChild!==c;)i.appendChild(document.body.firstChild);t=document.createElement("div"),t.id="chat-widget-sidebar",t.style.cssText=`
-      width: ${o}px;
+    `;document.body.firstChild&&document.body.firstChild!==p;)n.appendChild(document.body.firstChild);t=document.createElement("div"),t.id="chat-widget-sidebar",t.style.cssText=`
+      width: ${s}px;
       height: 100vh;
       position: fixed;
       top: 0;
       right: 0;
       background: #fff;
       box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-      transition: ${x};
+      transition: ${m};
       overflow: visible;
       display: flex;
       flex-direction: column;
@@ -35,14 +35,14 @@
       z-index: 10;
       opacity: 0.7;
       transition: opacity 0.2s, background 0.2s;
-    `,e.onmouseover=()=>{e.style.opacity="1",e.style.background="#3b82f6"},e.onmouseout=()=>{h||(e.style.opacity="0.6",e.style.background="#d1d5db")};const k=y=>{y.preventDefault(),y.stopPropagation(),h=!0,t.style.transition="none",i.style.transition="none",e.style.opacity="1",e.style.background="#3b82f6",document.body.style.cursor="ew-resize",document.body.style.userSelect="none",u.style.pointerEvents="none"},C=y=>{if(!h)return;const R="touches"in y?y.touches[0].clientX:y.clientX,M=window.innerWidth-R,m=Math.round(M/v)*v;m>=b&&m<=w&&m!==o&&(o=m,t.style.width=`${o}px`,i.style.marginRight=`${o}px`)},z=()=>{h&&(h=!1,t.style.transition=x,i.style.transition=E,e.style.opacity="0.7",e.style.background="#d1d5db",document.body.style.cursor="",document.body.style.userSelect="",u.style.pointerEvents="",localStorage.setItem("chat-widget-width",o.toString()))};e.addEventListener("mousedown",k),window.addEventListener("mousemove",C),window.addEventListener("mouseup",z),e.addEventListener("touchstart",k,{passive:!1}),window.addEventListener("touchmove",C,{passive:!1}),window.addEventListener("touchend",z),r=document.createElement("div"),r.style.cssText=`
+    `,e.onmouseover=()=>{e.style.opacity="1",e.style.background="#3b82f6"},e.onmouseout=()=>{h||(e.style.opacity="0.6",e.style.background="#d1d5db")};const k=u=>{u.preventDefault(),u.stopPropagation(),h=!0,t.style.transition="none",n.style.transition="none",e.style.opacity="1",e.style.background="#3b82f6",document.body.style.cursor="ew-resize",document.body.style.userSelect="none",r.style.pointerEvents="none"},C=u=>{if(!h)return;const M="touches"in u?u.touches[0].clientX:u.clientX,W=window.innerWidth-M,f=Math.round(W/v)*v;f>=b&&f<=w&&f!==s&&(s=f,t.style.width=`${s}px`,n.style.marginRight=`${s}px`)},I=()=>{h&&(h=!1,t.style.transition=m,n.style.transition=E,e.style.opacity="0.7",e.style.background="#d1d5db",document.body.style.cursor="",document.body.style.userSelect="",r.style.pointerEvents="",localStorage.setItem("chat-widget-width",s.toString()))};e.addEventListener("mousedown",k),window.addEventListener("mousemove",C),window.addEventListener("mouseup",I),e.addEventListener("touchstart",k,{passive:!1}),window.addEventListener("touchmove",C,{passive:!1}),window.addEventListener("touchend",I),c=document.createElement("div"),c.style.cssText=`
       display: flex;
       justify-content: space-between;
       padding: 8px;
       background: #1f2937;
       border-bottom: 1px solid #374151;
       transition: padding 0.3s ease;
-    `,d=document.createElement("button"),d.innerHTML="✕",d.title="Cerrar",d.style.cssText=`
+    `,a=document.createElement("button"),a.innerHTML="✕",a.title="Cerrar",a.style.cssText=`
       background: transparent;
       border: none;
       color: #9ca3af;
@@ -51,7 +51,7 @@
       padding: 4px 8px;
       border-radius: 4px;
       transition: all 0.2s;
-    `,d.onmouseover=()=>d.style.color="#fff",d.onmouseout=()=>d.style.color="#9ca3af",d.onclick=()=>g.close(),n=document.createElement("button"),n.innerHTML="⛶",n.title="Expandir",n.style.cssText=`
+    `,a.onmouseover=()=>a.style.color="#fff",a.onmouseout=()=>a.style.color="#9ca3af",a.onclick=()=>g.close(),i=document.createElement("button"),i.innerHTML="⛶",i.title="Expandir",i.style.cssText=`
       background: transparent;
       border: none;
       color: #9ca3af;
@@ -60,21 +60,21 @@
       padding: 4px 8px;
       border-radius: 4px;
       transition: all 0.2s;
-    `,n.onmouseover=()=>n.style.color="#fff",n.onmouseout=()=>n.style.color="#9ca3af",n.onclick=()=>{l==="expanded"?g.open():g.expand()},r.appendChild(d),r.appendChild(n),p=document.createElement("div"),p.style.cssText=`
+    `,i.onmouseover=()=>i.style.color="#fff",i.onmouseout=()=>i.style.color="#9ca3af",i.onclick=()=>{l==="expanded"?g.open():g.expand()},c.appendChild(a),c.appendChild(i),y=document.createElement("div"),y.style.cssText=`
       flex: 1;
       display: flex;
       transition: padding 0.3s ease;
       background: #1f2937;
-    `,u=document.createElement("iframe"),u.src=`${S}/widget`,u.style.cssText=`
+    `,r=document.createElement("iframe"),r.src=`${S}/widget`,r.style.cssText=`
       flex: 1;
       width: 100%;
       border: none;
-    `,p.appendChild(u),t.appendChild(e),t.appendChild(r),t.appendChild(p);const s=document.createElement("button");s.id="chat-widget-tab",s.innerHTML=`
+    `,y.appendChild(r),t.appendChild(e),t.appendChild(c),t.appendChild(y);const d=document.createElement("button");d.id="chat-widget-tab",d.innerHTML=`
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
       </svg>
       <span style="writing-mode: vertical-rl; text-orientation: mixed; font-size: 12px; font-weight: 500; letter-spacing: 0.5px;">Chat</span>
-    `,s.style.cssText=`
+    `,d.style.cssText=`
       position: fixed;
       right: 0;
       top: 50%;
@@ -91,7 +91,7 @@
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      transition: ${x};
+      transition: ${m};
       z-index: 9999;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    `,s.onmouseover=()=>{s.style.width="36px",s.style.background="#2563eb"},s.onmouseout=()=>{s.style.width="32px",s.style.background="#3b82f6"},s.onclick=()=>g.toggle(),c.appendChild(i),c.appendChild(t),document.body.appendChild(c),document.body.appendChild(s),document.body.style.margin="0",document.body.style.padding="0"}function f(){const a=document.getElementById("chat-widget-tab");switch(l){case"closed":t.style.transform="translateX(100%)",t.style.width=`${o}px`,i.style.marginRight="0",r.style.padding="8px",p.style.padding="0",a&&(a.style.display="flex"),e.style.display="none";break;case"sidebar":t.style.transform="translateX(0)",t.style.width=`${o}px`,i.style.marginRight=`${o}px`,r.style.padding="8px",p.style.padding="0",a&&(a.style.display="none"),e.style.display="block",n.innerHTML="⛶",n.title="Expandir";break;case"expanded":t.style.transform="translateX(0)",t.style.width="100vw",i.style.marginRight="100vw",r.style.padding="8px 8px 8px 24px",p.style.padding="0 0 0 16px",a&&(a.style.display="none"),e.style.display="none",n.innerHTML="⛶",n.title="Contraer";break}}const g={open(){l="sidebar",f()},close(){l="closed",f()},expand(){l="expanded",f()},toggle(){l==="closed"?this.open():this.close()},getState(){return l}};window.ChatWidget=g,document.readyState==="loading"?document.addEventListener("DOMContentLoaded",T):T()})()})();
+    `,d.onmouseover=()=>{d.style.width="36px",d.style.background="#2563eb"},d.onmouseout=()=>{d.style.width="32px",d.style.background="#3b82f6"},d.onclick=()=>g.toggle(),p.appendChild(n),p.appendChild(t),document.body.appendChild(p),document.body.appendChild(d),document.body.style.margin="0",document.body.style.padding="0"}function R(o){r&&r.contentWindow&&r.contentWindow.postMessage({type:"widget-state-change",state:o},"*")}function x(){const o=document.getElementById("chat-widget-tab");switch(l){case"closed":t.style.transform="translateX(100%)",t.style.width=`${s}px`,n.style.marginRight="0",n.style.visibility="visible",c.style.padding="8px",y.style.padding="0",o&&(o.style.display="flex"),e.style.display="none";break;case"sidebar":t.style.transform="translateX(0)",t.style.width=`${s}px`,n.style.marginRight=`${s}px`,n.style.visibility="visible",c.style.padding="8px",y.style.padding="0",o&&(o.style.display="none"),e.style.display="block",i.innerHTML="⛶",i.title="Expandir";break;case"expanded":t.style.transform="translateX(0)",t.style.width="100vw",n.style.marginRight="100vw",n.style.visibility="hidden",c.style.padding="8px 8px 8px 24px",y.style.padding="0 0 0 16px",o&&(o.style.display="none"),e.style.display="none",i.innerHTML="⛶",i.title="Contraer";break}R(l)}const g={open(){l="sidebar",x()},close(){l="closed",x()},expand(){l="expanded",x()},toggle(){l==="closed"?this.open():this.close()},getState(){return l}};window.ChatWidget=g,document.readyState==="loading"?document.addEventListener("DOMContentLoaded",T):T()})()})();

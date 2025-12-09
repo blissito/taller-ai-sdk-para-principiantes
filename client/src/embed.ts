@@ -324,6 +324,19 @@ interface ChatWidgetAPI {
     document.body.style.padding = "0";
   }
 
+  // Notificar al iframe del cambio de estado
+  function notifyIframe(newState: WidgetState) {
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(
+        {
+          type: "widget-state-change",
+          state: newState,
+        },
+        "*"
+      );
+    }
+  }
+
   function updateUI() {
     const tab = document.getElementById("chat-widget-tab") as HTMLButtonElement;
 
@@ -332,6 +345,7 @@ interface ChatWidgetAPI {
         sidebar.style.transform = "translateX(100%)";
         sidebar.style.width = `${currentWidth}px`;
         hostContent.style.marginRight = "0";
+        hostContent.style.visibility = "visible";
         controls.style.padding = "8px";
         iframeContainer.style.padding = "0";
         if (tab) tab.style.display = "flex";
@@ -342,6 +356,7 @@ interface ChatWidgetAPI {
         sidebar.style.transform = "translateX(0)";
         sidebar.style.width = `${currentWidth}px`;
         hostContent.style.marginRight = `${currentWidth}px`;
+        hostContent.style.visibility = "visible";
         controls.style.padding = "8px";
         iframeContainer.style.padding = "0";
         if (tab) tab.style.display = "none";
@@ -354,6 +369,7 @@ interface ChatWidgetAPI {
         sidebar.style.transform = "translateX(0)";
         sidebar.style.width = "100vw";
         hostContent.style.marginRight = "100vw";
+        hostContent.style.visibility = "hidden"; // Ocultar host en modo expanded
         controls.style.padding = "8px 8px 8px 24px";
         iframeContainer.style.padding = "0 0 0 16px";
         if (tab) tab.style.display = "none";
@@ -362,6 +378,9 @@ interface ChatWidgetAPI {
         expandBtn.title = "Contraer";
         break;
     }
+
+    // Notificar al iframe del cambio de estado
+    notifyIframe(state);
   }
 
   const ChatWidget: ChatWidgetAPI = {
