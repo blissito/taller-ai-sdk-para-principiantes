@@ -730,14 +730,15 @@
           <div class="card" style="grid-column: span 2">
             <h2>URL del Servidor</h2>
             <p style="color: #94a3b8; margin-bottom: 1rem">
-              Ingresa la URL de tu servidor en produccion
+              URL detectada automaticamente
             </p>
             <div class="form-group">
               <input
                 type="url"
                 id="server-url"
                 value=""
-                style="font-size: 1rem"
+                style="font-size: 1rem; background: #334155; cursor: not-allowed;"
+                disabled
               />
             </div>
           </div>
@@ -1351,11 +1352,8 @@
         document.getElementById("embed-code").textContent = code;
       }
 
-      // Server URL input
+      // Server URL input (auto-detected, disabled)
       document.getElementById("server-url").value = window.location.origin;
-      document
-        .getElementById("server-url")
-        .addEventListener("input", generateEmbedCode);
 
       // Copy code button
       document.getElementById("copy-code-btn").addEventListener("click", () => {
