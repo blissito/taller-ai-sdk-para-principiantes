@@ -94,7 +94,7 @@ export default function App() {
     console.log("contextText length:", contextText.length);
     console.log("fullText:", fullText.substring(0, 500) + "...");
     console.log("=============");
-    sendMessage({ text: fullText });
+    sendMessage({ text: fullText }); // @reto ¿Necesitamos enviar el contexto en cada mensaje?
     setInput("");
     // Mantenemos fileContexts para que persista entre mensajes
   };
@@ -133,7 +133,7 @@ export default function App() {
                 className="flex items-center gap-2 px-3 py-1.5 bg-white border border-gray-200 rounded-full text-sm"
               >
                 <span className="truncate max-w-[250px]">
-                  <strong>Contexto: </strong>
+                  <strong>En contexto: </strong>
                   {file.name}
                   <span className="text-gray-400 ml-1">
                     ({file.content.length} chars)
