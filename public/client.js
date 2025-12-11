@@ -10,7 +10,7 @@ async function startStream() {
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    output.textContent += decoder.decode(value);
+    output.textContent += decoder.decode(value); // Escribimos en el DOM
   }
 }
 
