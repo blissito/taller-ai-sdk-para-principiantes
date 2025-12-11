@@ -4,6 +4,10 @@
 
 # AI SDK Workshop
 
+Este repo es el material para el taller de AI-SDK.
+
+Puedes tomarlo aquí: [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
+
 > Aprende a construir aplicaciones con IA usando el Vercel AI SDK, desde inferencias básicas hasta UI generativa con artifacts.
 
 [![AI SDK](https://img.shields.io/badge/AI%20SDK-v5-blue)](https://ai-sdk.dev)
@@ -129,10 +133,10 @@ npm run deploy       # Deploy a producción (Fly.io)
 
 El repositorio está **listo para producción** en [Fly.io](https://fly.io). Incluye:
 
-| Archivo | Propósito |
-|---------|-----------|
+| Archivo      | Propósito                                       |
+| ------------ | ----------------------------------------------- |
 | `Dockerfile` | Build multi-stage optimizado (builder + runner) |
-| `fly.toml` | Configuración de Fly.io |
+| `fly.toml`   | Configuración de Fly.io                         |
 
 ### Características del setup
 
