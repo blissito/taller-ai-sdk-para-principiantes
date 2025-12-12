@@ -9,6 +9,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["*.ts"],
+  "include": ["*.ts", "db/*.ts"],
   "exclude": ["node_modules", "client", "dist"]
 }
