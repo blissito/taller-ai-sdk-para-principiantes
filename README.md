@@ -187,3 +187,25 @@ Para [@fixtergeek](https://www.fixtergeek.com)
 ---
 
 Si este taller te fue útil, considera darle una estrella al repo.
+
+---
+
+Snipet de código para mostrar las llamadas a las tools en el servidor:
+
+```ts
+for await (const part of result.fullStream) {
+  switch (part.type) {
+    case "tool-call":
+      console.log(`\n🔧 ${part.toolName}(${JSON.stringify(part.input)})`);
+      break;
+    case "tool-result":
+      console.log(`   ✅ ${JSON.stringify(part.output)}`);
+      break;
+    case "text-delta":
+      process.stdout.write(part.text);
+      break;
+  }
+}
+```
+
+Fullstream es la clave. Completo y en tiempo real. 🤴🏻
