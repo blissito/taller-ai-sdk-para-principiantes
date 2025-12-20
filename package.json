@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "npx concurrently \"npm run dev:*\" ",
     "dev:server": "tsx watch server.ts",
     "dev:client": "npm run dev --prefix client"
   },

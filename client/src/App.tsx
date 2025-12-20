@@ -77,7 +77,7 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Generar sessionId único para esta sesión
-  const sessionId = useMemo(() => crypto.randomUUID(), []);
+  const sessionId = useMemo(() => crypto.randomUUID(), []); // La sesión la define el crefresh del cliente. ✅
 
   const { messages, sendMessage } = useChat();
 
