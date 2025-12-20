@@ -11,8 +11,12 @@ export const chat = (messages: UIMessage[], contextChunks: string[] = []) => {
   // Si hay contexto de embeddings, agregarlo al system prompt
   const system =
     contextChunks.length > 0
-      ? `${baseSystem}\n\n## Contexto relevante encontrado por búsqueda semántica:\n${contextChunks.join("\n\n")}`
+      ? `${baseSystem}\n\n## Contexto relevante encontrado por búsqueda semántica:\n${contextChunks.join(
+          "\n\n"
+        )}`
       : baseSystem;
+
+  console.log("PEDACITOS USADOS: ", contextChunks);
 
   return streamText({
     model,

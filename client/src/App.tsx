@@ -145,7 +145,7 @@ export default function App() {
         }
       }
 
-      e.target.value = "";
+      e.target.value = ""; // reset input
     },
     [sessionId]
   );

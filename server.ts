@@ -56,6 +56,7 @@ app.post("/api/search", async (req, res) => {
 
   try {
     const results = await findSimilarChunks(sessionId, query, topK);
+    console.log("RESULT:", results);
     res.json({ results });
   } catch (error) {
     console.error("Error buscando:", error);
