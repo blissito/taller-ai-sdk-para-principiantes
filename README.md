@@ -2,7 +2,7 @@
 
 Aprende a construir aplicaciones con IA usando el [Vercel AI SDK](https://ai-sdk.dev).
 
-## Ejercicio
+## Ejercicio 02 | Añadiendo un SPA con React
 
 | Branch                       | Descripción     |
 | ---------------------------- | --------------- |
@@ -10,11 +10,11 @@ Aprende a construir aplicaciones con IA usando el [Vercel AI SDK](https://ai-sdk
 
 ## Descripción
 
-En este ejercicio vamos a por fin conectar nuestro endpoint de chat con un componente React en el cliente. Quemoción. 😂
+En este ejercicio vamos a sustituir nuestra interfaz anterior de chat por un componente React del cliente. Quemoción. 😂
 
-## Los componentes en el cliente
+## Componentes del cliente
 
-Necesitamos un chat, claro, un componente que renderice mensajes y un formulario para el input del usuario y todo lo demás que pondremos en App.ts:
+Necesitamos un chat, claro, un componente que renderice mensajes y un formulario para el input del usuario y todo lo demás que podemos observar en `App.tsx`.
 
 ```ts
 <div style={{ marginBottom: "1rem" }}>
@@ -29,12 +29,15 @@ Necesitamos un chat, claro, un componente que renderice mensajes y un formulario
 </div>
 ```
 
-Esta es una pequeña pieza dentro de todo este motor de conversaciones con robots, pero es una de las piezas más importántes. ⚙️
-Estaremos mejorando el ternario para atrapar más que a `part.type === "text"`.
+Esta es una pequeña pieza dentro de todo este motor de conversaciones con robots. 🤖
+Pero, es una de las piezas más importantes. 🏴‍☠️
 
-## La lógica de conexión con el hook: useChat
+> 👀 Estaremos mejorando el ternario para atrapar más que solo `part.type === "text"` en el ejercicio de la branch [`ejercicio/05-tools`](https://github.com/blissito/taller-ai-sdk-para-principiantes/blob/ejercicio/05-tools/client/src/App.tsx#L260).
 
-Para conseguir la comunicación cliente-servidor del chat, de la manera más simple y fluida posible, emplearemos al hook useChat que nos ofrece esta herramienta de Vercel. Su sintaxis es la siguiente:
+## ¿Cómo se emplea useChat?
+
+Para conseguir la comunicación cliente-servidor del chat, de la manera más simple y fluida posible, emplearemos al _hook_ `useChat`, que nos ofrece el ai-sdk de Vercel.
+Esta es la sintaxis:
 
 ```ts
 const [input, setInput] = useState("");
@@ -48,11 +51,13 @@ const handleSubmit = (e: React.FormEvent) => {
 };
 ```
 
-Usamos lo que el usuario escribe en el `input` y lo mandamos como `text` dentro de un objeto, que pasamos invocando `sendMessage`. 🕵🏻‍♂️ ¿Podría ser más simple?
+Usamos el texto que el usuario escribió en el `input`, lo limpiamos dejando solo un espacio simple entre palabras y lo colocamos como valor de una llave `text` dentro de un objeto que le pasamos a `sendMessage`. 🔥 Luego, reseteamos el _input_.
 
-## Defaults de servidor
+Díme, ¿podría ser más simple? 🤷🏻‍♂️
 
-Para conseguir la máxima simplificación aquí, he preferido crear el endpoint del api de la manera que el framework ya lo espera: `api/chat`
+## Ahora el endpoint del server
+
+Para conseguir la máxima simplificación aquí, he preferido crear el endpoint del api de la manera que el _framework_ ya lo espera: `/api/chat`.
 
 ```ts
 app.post("/api/chat", async (req, res) => {
@@ -62,13 +67,15 @@ app.post("/api/chat", async (req, res) => {
 });
 ```
 
-La función chat, me permite separar mejor la lógica de agentes, agnostica a las rutas. 🤓
+> 👀 Para poder usar `body` como un objeto y poder deconstruir `messages`, es necesario tener el _middleware_ `express.json` instalado: `app.use(express.json());` 🤓
 
-> 👀 `pipeUIMessageStreamToResponse` es la forma moderna, pero también el primer paso, pues en el futuro querremos escribir nuestros propios streams y sus deltas... 🫣 Espero seguir creciendo este taller con el tiempo y un ganchito, dice mi jefecita. 👵🏼
+> 💬 `pipeUIMessageStreamToResponse` es la forma moderna, pero también el primer paso, pues en el futuro querremos escribir nuestros propios _streams_ y sus deltas... 🫣 Espero seguir creciendo este taller; con el tiempo y un ganchito, dice mi jefecita. 👵🏼
 
-## Me resulta importante mencionar la transformación del repo para usar VITE ⚙️
+En este punto, me resulta importante mostrarte cómo se transformó el repo para usar Vite. 🤓
 
-Hicimos algunos cambios de arquitectura para poder tener un entorno full stack moderno usando express en el servidor y Vite compilando el build del cliente mientras lo sirve en un servidor secundario mientras se desarrolla el código. 👩🏻‍💻
+## Instalando y configurando Vite ⚙️
+
+Hicimos algunos cambios de arquitectura para poder tener un entorno _full stack_ moderno: usando express en el servidor y Vite para compilar el _build_ del cliente, mientras que también lo usamos para levantar un servidor secundario de desarrollo y poder ver los cambios en la interfaz en tiempo real. ⚡️👩🏻‍💻
 
 ### Primero, el archivo de configuración
 
@@ -89,6 +96,43 @@ export default defineConfig({
 });
 ```
 
-Se importa y se usa el plugin para `react()` dentro del array de plugins y también se agrega un proxy para que todas las peticiones a la ruta `/api` se apunten al puerto 3000. ✅
+Se importa y se usa el plugin para `react()` dentro del array de plugins y también se agrega un _proxy_ para que todas las peticiones a la ruta `/api` se apunten al puerto `3000`, es decir: nuestro servidor express. ✅
 
-> 👀 Puedes inicializar un nuevo proyecto Vite dentro de `client` con el comando: `npm create vite@latest`.
+> 👀 Siempre puedes inicializar un nuevo proyecto Vite dentro de la carpeta `client` con el comando: `npm create vite@latest`.
+
+### Ahora, observemos un poco los package.json
+
+Tenemos dos archivos `package.json`, uno para cada lado de nuestra app full stack: client/servidor.
+En el archivo del servidor encontraremos tres scripts: `dev`, `dev:server` y `dev:client`.
+
+```ts
+// ...
+  "scripts": {
+    "dev": "concurrently \"npm run dev:*\"",
+    "dev:server": "tsx watch server.ts",
+    "dev:client": "npm run dev --prefix client"
+  },
+  // ...
+
+```
+
+Como te imaginarás, `dev:server` usa `tsx` con _watch_ para que nuestro servidor API esté disponible en el puerto `3000`, mientras que `dev:client` hace uso de npm, enviando el comando a la carpeta `client` usando la flag `--prefix`. ✅
+Confirmemos esto, mirando el archivo `package.json` dentro de la carpeta `client`.
+
+```ts
+// ...
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+// ...
+```
+
+Encontraremos que el _script_ `dev` que ejecutará _concurrently_ es simplimente `vite`. 🤯
+También encontraremos las instalaciones del app del cliente. 🛍️
+
+## Ponerlo bonito se te queda de tarea
+
+Ahora que tienes tu propio asistente IA es momento de que le pongas $5 pesitos de diseño y propongas la interfaz más kawaii posible. 🍡🤭
+
+Abrazo. bliss. 🤓
