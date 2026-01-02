@@ -1,73 +1,100 @@
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import { chat, chat_with_artifact } from ".";
-import { chunkFile } from "./chunking";
-import { embedChunks, storeEmbeddings, findSimilarChunks } from "./embeddings";
-import { createUIMessageStream } from "ai";
+import {
+  createMemeFromPhoto,
+  generateMemeFromText,
+  analyzePhoto,
+} from "./index.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 const app = new Hono();
 
-// POST /api/embed - Crear embeddings
-app.post("/api/embed", async (c) => {
-  const { content, filename, sessionId } = await c.req.json();
-
-  if (!content || !sessionId) {
-    return c.json({ error: "content y sessionId son requeridos" }, 400);
-  }
-
+// Endpoint para generar meme desde foto + contexto
+app.post("/api/meme/from-photo", async (c) => {
   try {
-    const chunks = chunkFile(content, filename || "unknown", {
-      maxChunkSize: 500,
-      overlap: 50,
+    const { photo, context } = await c.req.json<{
+      photo: string; // Base64
+      context: string; // El contexto del meme
+    }>();
+
+    if (!photo || !context) {
+      return c.json({ error: "Se requiere photo y context" }, 400);
+    }
+
+    console.log("📸 Recibida solicitud de meme desde foto");
+    const result = await createMemeFromPhoto(photo, context);
+
+    return c.json({
+      success: true,
+      description: result.description,
+      memeImage: result.memeImage,
     });
-    console.log(`Creados ${chunks.length} chunks para ${filename}`);
-
-    const embeddedChunks = await embedChunks(chunks);
-    storeEmbeddings(sessionId, embeddedChunks);
-    console.log(`Embeddings almacenados para sesión ${sessionId}`);
-
-    return c.json({ success: true, chunksCount: chunks.length, filename });
   } catch (error) {
-    console.error("Error creando embeddings:", error);
-    return c.json({ error: "Error procesando archivo" }, 500);
+    console.error("Error generando meme:", error);
+    return c.json(
+      { error: "Error al generar el meme", details: String(error) },
+      500
+    );
   }
 });
 
-// POST /api/search - Buscar chunks similares
-app.post("/api/search", async (c) => {
-  const { query, sessionId, topK = 3 } = await c.req.json();
-
-  if (!query || !sessionId) {
-    return c.json({ error: "query y sessionId son requeridos" }, 400);
-  }
-
+// Endpoint para analizar solo la foto (sin generar meme)
+app.post("/api/meme/analyze", async (c) => {
   try {
-    const results = await findSimilarChunks(sessionId, query, topK);
-    return c.json({ results });
+    const { photo } = await c.req.json<{ photo: string }>();
+
+    if (!photo) {
+      return c.json({ error: "Se requiere photo" }, 400);
+    }
+
+    console.log("📸 Analizando foto...");
+    const description = await analyzePhoto(photo);
+
+    return c.json({
+      success: true,
+      description,
+    });
   } catch (error) {
-    console.error("Error buscando:", error);
-    return c.json({ error: "Error en búsqueda" }, 500);
+    console.error("Error analizando foto:", error);
+    return c.json(
+      { error: "Error al analizar la foto", details: String(error) },
+      500
+    );
   }
 });
 
-// POST /api/chat - Chat con streaming
-app.post("/api/chat", async (c) => {
-  const { messages, sessionId } = await c.req.json();
-  const result = chat(messages, sessionId);
-  return result.toUIMessageStreamResponse();
+// Endpoint para generar meme solo desde texto
+app.post("/api/meme/from-text", async (c) => {
+  try {
+    const { prompt } = await c.req.json<{ prompt: string }>();
+
+    if (!prompt) {
+      return c.json({ error: "Se requiere prompt" }, 400);
+    }
+
+    console.log("🎨 Generando meme desde texto:", prompt);
+    const memeImage = await generateMemeFromText(prompt);
+
+    return c.json({
+      success: true,
+      memeImage,
+    });
+  } catch (error) {
+    console.error("Error generando meme:", error);
+    return c.json(
+      { error: "Error al generar el meme", details: String(error) },
+      500
+    );
+  }
 });
 
-// Sending custom data in a merged stream
-app.post("/api/chat_with_artifact", async (c) => {
-  const { messages, sessionId } = await c.req.json();
-  return chat_with_artifact({ messages, sessionId }); // Returns Response
-});
-
-// Servir frontend estático
+// Servir estáticos del cliente compilado
 app.use("/*", serveStatic({ root: "./client/dist" }));
 
+// Fallback SPA: rutas no encontradas -> index.html
+app.use("/*", serveStatic({ root: "./client/dist", path: "index.html" }));
+
 serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.info(`Running on port: ${info.port}`);
+  console.info(`🚀 Meme Generator running on port: ${info.port}`);
 });
