@@ -2,11 +2,11 @@
   <img src="https://www.fixtergeek.com/logo.png" alt="Fixtergeek" width="200" />
 </p>
 
-# AI SDK Workshop
+# AI SDK - Curso, Taller y Libro
 
-Este repo es el material para el taller de AI-SDK.
+Este repo es el material oficial para el **curso**, **taller** y **libro** de AI-SDK.
 
-Puedes tomarlo aquí: [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
+Accede a todo el contenido en: [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
 
 > Aprende a construir aplicaciones con IA usando el Vercel AI SDK, desde inferencias básicas hasta UI generativa con artifacts.
 
@@ -17,7 +17,7 @@ Puedes tomarlo aquí: [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
 
 ## Descripción
 
-Un taller práctico y progresivo para dominar el **Vercel AI SDK**. Cada ejercicio construye sobre el anterior, introduciendo un concepto nuevo mientras refuerza los aprendidos.
+Material práctico y progresivo para dominar el **Vercel AI SDK**. Cada ejercicio construye sobre el anterior, introduciendo un concepto nuevo mientras refuerza los aprendidos.
 
 **Lo que vas a construir:**
 
@@ -170,12 +170,11 @@ Tu app estará disponible en `https://ai-sdk-curso.fly.dev`
 - [Documentación Hono](https://hono.dev/docs)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
 
-## Próximas fechas
+## Próximo webinar
 
-| Fecha                | Modalidad |
-| -------------------- | --------- |
-| 13 de diciembre 2024 | En vivo   |
-| 20 de diciembre 2024 | En vivo   |
+| Fecha                             | Modalidad |
+| --------------------------------- | --------- |
+| Jueves 16 de Enero · 7:00 PM CDMX | En vivo   |
 
 Regístrate en [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
 
@@ -186,26 +185,4 @@ Para [@fixtergeek](https://www.fixtergeek.com)
 
 ---
 
-Si este taller te fue útil, considera darle una estrella al repo.
-
----
-
-Snipet de código para mostrar las llamadas a las tools en el servidor:
-
-```ts
-for await (const part of result.fullStream) {
-  switch (part.type) {
-    case "tool-call":
-      console.log(`\n🔧 ${part.toolName}(${JSON.stringify(part.input)})`);
-      break;
-    case "tool-result":
-      console.log(`   ✅ ${JSON.stringify(part.output)}`);
-      break;
-    case "text-delta":
-      process.stdout.write(part.text);
-      break;
-  }
-}
-```
-
-Fullstream es la clave. Completo y en tiempo real. 🤴🏻
+Si este material te fue útil, considera darle una estrella al repo.
