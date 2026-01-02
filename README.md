@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="https://www.fixtergeek.com/logo.png" alt="Fixtergeek" width="200" />
+  <img src="./logo.png" alt="Fixtergeek" width="200" />
 </p>
 
 # AI SDK - Curso, Taller y Libro
