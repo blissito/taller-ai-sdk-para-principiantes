@@ -6,7 +6,7 @@
 
 Este repo es el material oficial para el **curso**, **taller** y **libro** de AI-SDK.
 
-Accede a todo el contenido en: [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
+Accede a todo el contenido en: [fixtergeek.com/cursos/ai-sdk](https://www.fixtergeek.com/cursos/ai-sdk/detalle)
 
 > Aprende a construir aplicaciones con IA usando el Vercel AI SDK, desde inferencias básicas hasta UI generativa con artifacts.
 
@@ -176,7 +176,7 @@ Tu app estará disponible en `https://ai-sdk-curso.fly.dev`
 | --------------------------------- | --------- |
 | Jueves 16 de Enero · 7:00 PM CDMX | En vivo   |
 
-Regístrate en [fixtergeek.com/ai-sdk](https://www.fixtergeek.com/ai-sdk)
+Regístrate en [fixtergeek.com/cursos/ai-sdk](https://www.fixtergeek.com/cursos/ai-sdk/detalle)
 
 ## Autor
 
