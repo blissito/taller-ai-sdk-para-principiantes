@@ -1,360 +1,474 @@
-import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
+import { useChat } from "@ai-sdk/react";
+import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { Streamdown } from "streamdown";
+import {
+  SandpackProvider,
+  SandpackCodeEditor,
+  SandpackConsole,
+  SandpackPreview,
+} from "@codesandbox/sandpack-react";
 
-type MemeMode = "photo" | "text";
+// Componente Sandpack completo con layout profesional
+function CodeArtifact({
+  code,
+  title,
+  topic,
+}: {
+  code: string;
+  title: string;
+  topic?: string;
+}) {
+  const [activeTab, setActiveTab] = useState<"console" | "preview">("console");
+
+  return (
+    <SandpackProvider
+      key={code}
+      template="vanilla-ts"
+      theme={{
+        colors: {
+          surface1: "#0f172a", // slate-900
+          surface2: "#1e293b", // slate-800
+          surface3: "#334155", // slate-700
+          clickable: "#94a3b8", // slate-400
+          base: "#e2e8f0", // slate-200
+          disabled: "#475569", // slate-600
+          hover: "#f1f5f9", // slate-100
+          accent: "#22d3ee", // cyan-400
+          error: "#f87171", // red-400
+          errorSurface: "#7f1d1d", // red-900
+        },
+        syntax: {
+          plain: "#e2e8f0",
+          comment: { color: "#64748b", fontStyle: "italic" },
+          keyword: "#c084fc", // purple-400
+          tag: "#22d3ee", // cyan-400
+          punctuation: "#94a3b8",
+          definition: "#4ade80", // green-400
+          property: "#60a5fa", // blue-400
+          static: "#fbbf24", // amber-400
+          string: "#a5f3fc", // cyan-200
+        },
+        font: {
+          body: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          mono: '"Fira Code", "JetBrains Mono", Menlo, Monaco, monospace',
+          size: "13px",
+          lineHeight: "1.6",
+        },
+      }}
+      files={{
+        "/index.ts": {
+          code: code,
+          active: true,
+        },
+      }}
+      options={{
+        autorun: true,
+        autoReload: true,
+        recompileMode: "delayed",
+        recompileDelay: 500,
+        initMode: "immediate",
+      }}
+    >
+      <div className="h-full flex flex-col bg-slate-900 rounded-lg overflow-hidden border border-slate-700/50">
+        {/* Header con título y controles */}
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-800/80 border-b border-slate-700">
+          <div className="flex items-center gap-3">
+            {/* Dots decorativos estilo macOS */}
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full bg-red-500/80" />
+              <span className="w-3 h-3 rounded-full bg-yellow-500/80" />
+              <span className="w-3 h-3 rounded-full bg-green-500/80" />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-white flex items-center gap-2">
+                <svg
+                  className="w-4 h-4 text-cyan-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  />
+                </svg>
+                {title}
+              </h3>
+              {topic && <span className="text-xs text-slate-400">{topic}</span>}
+            </div>
+          </div>
+          <SandpackControls />
+        </div>
+
+        {/* Editor de código */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <SandpackCodeEditor
+              showLineNumbers
+              showInlineErrors
+              wrapContent
+              showTabs={false}
+              style={{
+                height: "100%",
+                fontSize: "13px",
+              }}
+            />
+          </div>
+
+          {/* Tabs y Output */}
+          <div className="h-[200px] flex flex-col border-t border-slate-700">
+            <SandpackTabs activeTab={activeTab} onTabChange={setActiveTab} />
+            <div className="flex-1 overflow-hidden relative">
+              {/* Preview SIEMPRE montado para que el bundler funcione */}
+              <div
+                className={
+                  activeTab === "preview"
+                    ? "h-full"
+                    : "absolute inset-0 opacity-0 pointer-events-none"
+                }
+              >
+                <SandpackPreview
+                  style={{ height: "100%" }}
+                  showNavigator={false}
+                  showOpenInCodeSandbox={false}
+                  showRefreshButton={false}
+                />
+              </div>
+              {/* Console visible cuando está activo */}
+              <div className={activeTab === "console" ? "h-full" : "hidden"}>
+                <SandpackConsole
+                  style={{ height: "100%" }}
+                  showHeader={false}
+                  showResetConsoleButton
+                  resetOnPreviewRestart
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </SandpackProvider>
+  );
+}
 
 function App() {
-  const [mode, setMode] = useState<MemeMode>("text");
-  const [prompt, setPrompt] = useState("");
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
-  const [description, setDescription] = useState<string | null>(null);
-  const [memeImage, setMemeImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { messages, sendMessage, status } = useChat();
+  const [input, setInput] = useState("");
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Manejar selección de archivo
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Scroll automático al final de los mensajes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    // Crear preview
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setPhotoPreview(result);
-      // Extraer solo el base64 sin el prefijo data:image/...
-      const base64 = result.split(",")[1];
-      setPhotoBase64(base64);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Generar meme desde foto
-  const handleGenerateFromPhoto = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!photoBase64 || !prompt) return;
-
-    setIsLoading(true);
-    setError(null);
-    setMemeImage(null);
-
-    try {
-      const response = await fetch("/api/meme/from-photo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          photo: photoBase64,
-          context: prompt,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al generar el meme");
+  // Extraer el código del artifact desde los mensajes
+  const codeArtifact = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (message.role === "assistant") {
+        const customPart = message.parts?.find(
+          (part) => part.type === "data-custom"
+        );
+        if (customPart && customPart.type === "data-custom") {
+          const data = customPart.data as {
+            type: string;
+            topic: string;
+            title: string;
+            code: string;
+          };
+          if (data.type === "code") {
+            return data;
+          }
+        }
       }
-
-      setDescription(data.description);
-      setMemeImage(data.memeImage);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
-    } finally {
-      setIsLoading(false);
     }
-  };
+    return null;
+  }, [messages]);
 
-  // Generar meme desde texto
-  const handleGenerateFromText = async (e: FormEvent) => {
+  const isLoading = status === "streaming" || status === "submitted";
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!prompt) return;
-
-    setIsLoading(true);
-    setError(null);
-    setMemeImage(null);
-
-    try {
-      const response = await fetch("/api/meme/from-text", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al generar el meme");
-      }
-
-      setMemeImage(data.memeImage);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Limpiar todo
-  const handleReset = () => {
-    setPhotoPreview(null);
-    setPhotoBase64(null);
-    setDescription(null);
-    setMemeImage(null);
-    setPrompt("");
-    setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (!input.trim() || isLoading) return;
+    sendMessage({ text: input });
+    setInput("");
   };
 
   return (
-    <article className="min-h-svh bg-gradient-to-br from-purple-900 via-blue-900 to-black text-white">
+    <article className="min-h-svh bg-gradient-to-br from-blue-950 via-indigo-900 to-slate-900 text-white flex flex-col">
       {/* Header */}
-      <header className="p-8 text-center">
-        <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">
-          Meme Generator
+      <header className="p-4 text-center border-b border-white/10">
+        <h1 className="text-3xl font-bold mb-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+          TypeScript Tutor
         </h1>
-        <p className="text-xl text-gray-300">
-          Convierte fotos en memes con AI SDK 6
+        <p className="text-gray-400 text-sm">
+          Aprende TypeScript con ejemplos ejecutables - AI SDK 6 + Sandpack
         </p>
       </header>
 
-      {/* Mode Selector */}
-      <div className="flex justify-center gap-4 mb-8">
-        <button
-          onClick={() => {
-            setMode("text");
-            handleReset();
-          }}
-          className={`px-6 py-3 rounded-full font-semibold transition-all ${
-            mode === "text"
-              ? "bg-gradient-to-r from-pink-500 to-purple-500 shadow-lg shadow-pink-500/30"
-              : "bg-white/10 hover:bg-white/20"
-          }`}
-        >
-          Solo Texto
-        </button>
-        <button
-          onClick={() => {
-            setMode("photo");
-            handleReset();
-          }}
-          className={`px-6 py-3 rounded-full font-semibold transition-all ${
-            mode === "photo"
-              ? "bg-gradient-to-r from-pink-500 to-purple-500 shadow-lg shadow-pink-500/30"
-              : "bg-white/10 hover:bg-white/20"
-          }`}
-        >
-          Desde Foto
-        </button>
-      </div>
-
-      <main className="max-w-4xl mx-auto px-4 pb-8">
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <section className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
-            <h2 className="text-2xl font-bold mb-4">
-              {mode === "photo" ? "1. Sube una foto" : "Describe tu meme"}
+      {/* Main Content */}
+      <main className="flex-1 flex overflow-hidden">
+        {/* Sandpack Panel - Código ejecutable */}
+        <section className="w-1/2 border-r border-white/10 flex flex-col">
+          <div className="p-3 border-b border-white/10 bg-white/5">
+            <h2 className="font-semibold text-cyan-400 flex items-center gap-2">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {codeArtifact?.title || "Sandbox"}
             </h2>
-
-            {mode === "photo" && (
-              <div className="mb-6">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="photo-input"
-                />
-                <label
-                  htmlFor="photo-input"
-                  className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/30 rounded-2xl cursor-pointer hover:border-pink-500 hover:bg-white/5 transition-all"
-                >
-                  {photoPreview ? (
-                    <img
-                      src={photoPreview}
-                      alt="Preview"
-                      className="w-full h-full object-contain rounded-2xl"
-                    />
-                  ) : (
-                    <>
-                      <svg
-                        className="w-12 h-12 mb-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span className="text-gray-400">
-                        Click para subir una foto
-                      </span>
-                    </>
-                  )}
-                </label>
-              </div>
+            {codeArtifact?.topic && (
+              <span className="text-xs text-gray-500">
+                Tema: {codeArtifact.topic}
+              </span>
             )}
+          </div>
 
-            {mode === "photo" && photoPreview && (
-              <h2 className="text-2xl font-bold mb-4">
-                2. Escribe el contexto del meme
-              </h2>
-            )}
-
-            <form
-              onSubmit={
-                mode === "photo"
-                  ? handleGenerateFromPhoto
-                  : handleGenerateFromText
-              }
-            >
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={
-                  mode === "photo"
-                    ? "Ej: Cuando llegas tarde al trabajo..."
-                    : "Ej: Un gato programador frustrado mirando errores de TypeScript"
-                }
-                className="w-full h-32 bg-white/5 border border-white/20 rounded-2xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 resize-none"
+          <div className="flex-1 overflow-hidden p-2">
+            {codeArtifact ? (
+              <CodeArtifact
+                code={codeArtifact.code}
+                title={codeArtifact.title}
+                topic={codeArtifact.topic}
               />
-
-              <div className="flex gap-4 mt-4">
-                <button
-                  type="submit"
-                  disabled={
-                    isLoading || !prompt || (mode === "photo" && !photoBase64)
-                  }
-                  className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl font-bold text-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500 bg-slate-900/80 rounded-lg border border-slate-700/50">
+                <div className="text-center p-8">
+                  {/* Terminal icon */}
+                  <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center border border-slate-700/50">
+                    <svg
+                      className="w-10 h-10 text-cyan-400/60"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1.5}
+                        d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-lg font-medium text-gray-300 mb-2">
+                    Sandbox TypeScript
+                  </p>
+                  <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                    Pregunta sobre types, functions, interfaces y el código
+                    aparecerá aquí listo para ejecutar
+                  </p>
+                  <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-600">
+                    <span className="flex items-center gap-1">
                       <svg
-                        className="animate-spin h-5 w-5"
-                        viewBox="0 0 24 24"
+                        className="w-3.5 h-3.5 text-emerald-500"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
                       >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                       </svg>
-                      Generando...
+                      Auto-run
                     </span>
-                  ) : (
-                    "Generar Meme"
-                  )}
-                </button>
-
-                {(memeImage || photoPreview) && (
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="px-6 py-4 bg-white/10 rounded-2xl font-bold hover:bg-white/20 transition-all"
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {error && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-200">
-                {error}
+                    <span className="text-slate-600">•</span>
+                    <span>Editable</span>
+                    <span className="text-slate-600">•</span>
+                    <span>Console + Preview</span>
+                  </div>
+                </div>
               </div>
             )}
+          </div>
+        </section>
 
-            {description && (
-              <div className="mt-4 p-4 bg-blue-500/20 border border-blue-500/50 rounded-2xl">
-                <h3 className="font-bold mb-2">Descripcion detectada:</h3>
-                <p className="text-sm text-gray-300">{description}</p>
-              </div>
-            )}
-          </section>
-
-          {/* Output Section */}
-          <section className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
-            <h2 className="text-2xl font-bold mb-4">Tu Meme</h2>
-
-            <div className="flex items-center justify-center w-full min-h-[400px] bg-white/5 rounded-2xl overflow-hidden">
-              {memeImage ? (
-                <img
-                  src={`data:image/png;base64,${memeImage}`}
-                  alt="Generated meme"
-                  className="max-w-full max-h-[500px] object-contain"
+        {/* Chat Panel */}
+        <section className="w-1/2 flex flex-col">
+          <div className="p-3 border-b border-white/10 bg-white/5">
+            <h2 className="font-semibold text-purple-400 flex items-center gap-2">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                 />
-              ) : (
-                <div className="text-center text-gray-500">
-                  <svg
-                    className="w-24 h-24 mx-auto mb-4 opacity-30"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              </svg>
+              Chat
+            </h2>
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-auto p-4 space-y-4">
+            {messages.length === 0 && (
+              <div className="text-center text-gray-500 mt-8">
+                <p className="text-lg mb-4">Hola! Soy tu tutor de TypeScript</p>
+                <div className="space-y-2 text-sm">
+                  <button
+                    onClick={() =>
+                      sendMessage({ text: "Explícame los tipos básicos" })
+                    }
+                    className="bg-white/5 rounded-lg p-3 block w-full text-left hover:bg-white/10 transition-colors"
                   >
+                    Explícame los tipos básicos
+                  </button>
+                  <button
+                    onClick={() =>
+                      sendMessage({ text: "Cómo funcionan las interfaces?" })
+                    }
+                    className="bg-white/5 rounded-lg p-3 block w-full text-left hover:bg-white/10 transition-colors"
+                  >
+                    Cómo funcionan las interfaces?
+                  </button>
+                  <button
+                    onClick={() =>
+                      sendMessage({ text: "Muéstrame un ejemplo de generics" })
+                    }
+                    className="bg-white/5 rounded-lg p-3 block w-full text-left hover:bg-white/10 transition-colors"
+                  >
+                    Muéstrame un ejemplo de generics
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {messages.map((message) => {
+              // Extraer el texto del mensaje (ignorar data-custom)
+              const textParts = message.parts?.filter(
+                (part) => part.type === "text"
+              );
+              const text =
+                textParts
+                  ?.map((p) => (p.type === "text" ? p.text : ""))
+                  .join("") || "";
+
+              if (!text && message.role === "assistant") return null;
+
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+                      message.role === "user"
+                        ? "bg-blue-600 text-white"
+                        : "bg-white/10 text-gray-200"
+                    }`}
+                  >
+                    {message.role === "user" ? (
+                      <p className="whitespace-pre-wrap">{text}</p>
+                    ) : (
+                      <Streamdown mode="streaming">{text}</Streamdown>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-white/10 rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" />
+                    <div
+                      className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    />
+                    <div
+                      className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <form
+            onSubmit={handleSubmit}
+            className="p-4 border-t border-white/10"
+          >
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Pregunta sobre TypeScript..."
+                className="flex-1 bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                disabled={isLoading}
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isLoading ? (
+                  <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24">
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                      fill="none"
+                    />
                     <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                     />
                   </svg>
-                  <p>Tu meme aparecera aqui</p>
-                </div>
-              )}
+                ) : (
+                  "Enviar"
+                )}
+              </button>
             </div>
-
-            {memeImage && (
-              <a
-                href={`data:image/png;base64,${memeImage}`}
-                download="meme.png"
-                className="block w-full mt-4 py-3 text-center bg-green-500 hover:bg-green-600 rounded-2xl font-bold transition-all"
-              >
-                Descargar Meme
-              </a>
-            )}
-          </section>
-        </div>
-
-        {/* Footer */}
-        <footer className="mt-12 text-center text-gray-500">
-          <p>
-            Creado con{" "}
-            <a
-              href="https://ai-sdk.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pink-500 hover:underline"
-            >
-              AI SDK 6
-            </a>{" "}
-            +{" "}
-            <a
-              href="https://openai.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pink-500 hover:underline"
-            >
-              OpenAI gpt-image-1
-            </a>
-          </p>
-        </footer>
+          </form>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer className="p-2 text-center text-gray-500 text-xs border-t border-white/10">
+        <p>
+          AI SDK 6 ToolLoopAgent +{" "}
+          <a
+            href="https://sandpack.codesandbox.io"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-500 hover:underline"
+          >
+            Sandpack
+          </a>
+        </p>
+      </footer>
     </article>
   );
 }

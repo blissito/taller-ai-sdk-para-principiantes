@@ -1,9 +1,4 @@
 import "dotenv/config";
 
-// Re-exportar las funciones del meme generator
-export {
-  analyzePhoto,
-  generateMeme,
-  createMemeFromPhoto,
-  generateMemeFromText,
-} from "./meme-generator.js";
+// Re-exportar las funciones del TypeScript Tutor
+export { tutorAgent, tutor, tutorSimple } from "./typescript-tutor.js";
