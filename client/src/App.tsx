@@ -1,362 +1,406 @@
-import { useState, useRef, type FormEvent, type ChangeEvent } from "react";
+import { useState, useEffect } from "react";
 
-type MemeMode = "photo" | "text";
+type Style = "vibrant" | "minimal" | "dramatic" | "tech";
 
-function App() {
-  const [mode, setMode] = useState<MemeMode>("text");
-  const [prompt, setPrompt] = useState("");
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [photoBase64, setPhotoBase64] = useState<string | null>(null);
-  const [description, setDescription] = useState<string | null>(null);
-  const [memeImage, setMemeImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+interface Format { format: string; image: string }
+interface Preview { id: string; style: Style; prompt: string; image: string; formats?: Format[] }
+interface Session { id: string; title: string; previews: Preview[]; createdAt: number }
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const STYLE_INFO: Record<Style, { emoji: string; label: string }> = {
+  vibrant: { emoji: "🎨", label: "Vibrante" },
+  minimal: { emoji: "✨", label: "Mínimo" },
+  dramatic: { emoji: "🎬", label: "Dramático" },
+  tech: { emoji: "🚀", label: "Tech" },
+};
 
-  // Manejar selección de archivo
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+const STORAGE_KEY = "thumbnail-history";
 
-    // Crear preview
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setPhotoPreview(result);
-      // Extraer solo el base64 sin el prefijo data:image/...
-      const base64 = result.split(",")[1];
-      setPhotoBase64(base64);
+export default function App() {
+  const [title, setTitle] = useState("");
+  const [previews, setPreviews] = useState<Preview[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState<string | null>(null);
+
+  const [loadingPreviews, setLoadingPreviews] = useState(false);
+  const [loadingFormats, setLoadingFormats] = useState(false);
+
+  const [history, setHistory] = useState<Session[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const selected = previews.find((p) => p.id === selectedId) || null;
+
+  // Cargar historial al inicio (con validación de formato)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Session[];
+        // Filtrar solo sesiones válidas (con el formato nuevo)
+        const valid = parsed.filter(
+          (s) => s.id && s.title && Array.isArray(s.previews) && s.previews.length > 0
+        );
+        setHistory(valid);
+        // Limpiar si había inválidas
+        if (valid.length !== parsed.length) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(valid));
+        }
+      }
+    } catch {
+      // Si falla el parse, limpiar localStorage
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, []);
+
+  // Cerrar lightbox con Escape
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setZoomed(null);
     };
-    reader.readAsDataURL(file);
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
+
+  // Guardar historial cuando cambia
+  const saveToHistory = (session: Session) => {
+    const updated = [session, ...history].slice(0, 10); // max 10
+    setHistory(updated);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   };
 
-  // Generar meme desde foto
-  const handleGenerateFromPhoto = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!photoBase64 || !prompt) return;
+  // Cargar sesión del historial
+  const loadSession = (session: Session) => {
+    setTitle(session.title);
+    setPreviews(session.previews);
+    setSelectedId(null);
+    setShowHistory(false);
+  };
 
-    setIsLoading(true);
-    setError(null);
-    setMemeImage(null);
+  // Nueva sesión
+  const newSession = () => {
+    setTitle("");
+    setPreviews([]);
+    setSelectedId(null);
+  };
+
+  // PASO 1: Explorar (genera 4 previews, 1 por estilo)
+  const explore = async () => {
+    if (!title.trim()) return;
+    setLoadingPreviews(true);
+    setPreviews([]);
+    setSelectedId(null);
 
     try {
-      const response = await fetch("/api/meme/from-photo", {
+      const res = await fetch("/api/previews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          photo: photoBase64,
-          context: prompt,
-        }),
+        body: JSON.stringify({ title }),
       });
+      const data = await res.json();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al generar el meme");
+      if (!res.ok || data.error) {
+        alert(`Error: ${data.error || "No se pudieron generar los previews"}`);
+        return;
       }
 
-      setDescription(data.description);
-      setMemeImage(data.memeImage);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
+      setPreviews(data.previews);
+
+      // Guardar en historial
+      saveToHistory({
+        id: Date.now().toString(),
+        title,
+        previews: data.previews,
+        createdAt: Date.now(),
+      });
+    } catch {
+      alert("Error de conexión. Verifica que el servidor esté corriendo.");
     } finally {
-      setIsLoading(false);
+      setLoadingPreviews(false);
     }
   };
 
-  // Generar meme desde texto
-  const handleGenerateFromText = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!prompt) return;
+  // PASO 2: Generar formatos (y cachear en el preview)
+  const generate = async () => {
+    if (!selected) return;
 
-    setIsLoading(true);
-    setError(null);
-    setMemeImage(null);
+    // No regenerar si ya tiene formatos
+    if (selected.formats) {
+      console.log("Ya tiene formatos, no regenerar");
+      return;
+    }
+
+    const targetId = selected.id; // Capturar antes de async
+    setLoadingFormats(true);
 
     try {
-      const response = await fetch("/api/meme/from-text", {
+      const res = await fetch("/api/formats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ reference: selected.image, prompt: selected.prompt }),
       });
+      const data = await res.json();
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al generar el meme");
+      if (!res.ok || data.error) {
+        alert(`Error: ${data.error || "No se pudieron generar los formatos"}`);
+        return;
       }
 
-      setMemeImage(data.memeImage);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error desconocido");
+      if (!data.formats?.length) {
+        alert("No se generó ningún formato. Intenta de nuevo.");
+        return;
+      }
+
+      // Guardar formatos en el preview correspondiente
+      setPreviews((prev) =>
+        prev.map((p) =>
+          p.id === targetId ? { ...p, formats: data.formats } : p
+        )
+      );
+    } catch (error) {
+      alert("Error de conexión. Verifica que el servidor esté corriendo.");
     } finally {
-      setIsLoading(false);
+      setLoadingFormats(false);
     }
   };
 
-  // Limpiar todo
-  const handleReset = () => {
-    setPhotoPreview(null);
-    setPhotoBase64(null);
-    setDescription(null);
-    setMemeImage(null);
-    setPrompt("");
-    setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  // Download
+  const download = (image: string, name: string) => {
+    const a = document.createElement("a");
+    a.href = `data:image/png;base64,${image}`;
+    a.download = `${name}.png`;
+    a.click();
   };
 
   return (
-    <article className="min-h-svh bg-gradient-to-br from-purple-900 via-blue-900 to-black text-white">
-      {/* Header */}
-      <header className="p-8 text-center">
-        <h1 className="text-5xl font-bold mb-2 bg-gradient-to-r from-yellow-400 via-pink-500 to-purple-500 bg-clip-text text-transparent">
-          Meme Generator
-        </h1>
-        <p className="text-xl text-gray-300">
-          Convierte fotos en memes con AI SDK 6
-        </p>
-      </header>
-
-      {/* Mode Selector */}
-      <div className="flex justify-center gap-4 mb-8">
-        <button
-          onClick={() => {
-            setMode("text");
-            handleReset();
-          }}
-          className={`px-6 py-3 rounded-full font-semibold transition-all ${
-            mode === "text"
-              ? "bg-gradient-to-r from-pink-500 to-purple-500 shadow-lg shadow-pink-500/30"
-              : "bg-white/10 hover:bg-white/20"
-          }`}
-        >
-          Solo Texto
-        </button>
-        <button
-          onClick={() => {
-            setMode("photo");
-            handleReset();
-          }}
-          className={`px-6 py-3 rounded-full font-semibold transition-all ${
-            mode === "photo"
-              ? "bg-gradient-to-r from-pink-500 to-purple-500 shadow-lg shadow-pink-500/30"
-              : "bg-white/10 hover:bg-white/20"
-          }`}
-        >
-          Desde Foto
-        </button>
-      </div>
-
-      <main className="max-w-4xl mx-auto px-4 pb-8">
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Input Section */}
-          <section className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
-            <h2 className="text-2xl font-bold mb-4">
-              {mode === "photo" ? "1. Sube una foto" : "Describe tu meme"}
-            </h2>
-
-            {mode === "photo" && (
-              <div className="mb-6">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="photo-input"
-                />
-                <label
-                  htmlFor="photo-input"
-                  className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/30 rounded-2xl cursor-pointer hover:border-pink-500 hover:bg-white/5 transition-all"
-                >
-                  {photoPreview ? (
-                    <img
-                      src={photoPreview}
-                      alt="Preview"
-                      className="w-full h-full object-contain rounded-2xl"
-                    />
-                  ) : (
-                    <>
-                      <svg
-                        className="w-12 h-12 mb-2 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <span className="text-gray-400">
-                        Click para subir una foto
-                      </span>
-                    </>
-                  )}
-                </label>
-              </div>
-            )}
-
-            {mode === "photo" && photoPreview && (
-              <h2 className="text-2xl font-bold mb-4">
-                2. Escribe el contexto del meme
-              </h2>
-            )}
-
-            <form
-              onSubmit={
-                mode === "photo"
-                  ? handleGenerateFromPhoto
-                  : handleGenerateFromText
-              }
+    <div className="h-screen bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 flex flex-col overflow-hidden">
+      <div className="max-w-5xl mx-auto w-full flex flex-col gap-4 flex-1 min-h-0">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            Thumbnail Generator
+            <span className="text-sm font-normal text-gray-400 ml-2">
+              AI SDK 6 + OpenAI Edit
+            </span>
+          </h1>
+          {history.length > 0 && (
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-sm text-gray-400 hover:text-white flex items-center gap-1"
             >
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={
-                  mode === "photo"
-                    ? "Ej: Cuando llegas tarde al trabajo..."
-                    : "Ej: Un gato programador frustrado mirando errores de TypeScript"
-                }
-                className="w-full h-32 bg-white/5 border border-white/20 rounded-2xl p-4 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 resize-none"
-              />
-
-              <div className="flex gap-4 mt-4">
-                <button
-                  type="submit"
-                  disabled={
-                    isLoading || !prompt || (mode === "photo" && !photoBase64)
-                  }
-                  className="flex-1 py-4 bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl font-bold text-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg
-                        className="animate-spin h-5 w-5"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      Generando...
-                    </span>
-                  ) : (
-                    "Generar Meme"
-                  )}
-                </button>
-
-                {(memeImage || photoPreview) && (
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="px-6 py-4 bg-white/10 rounded-2xl font-bold hover:bg-white/20 transition-all"
-                  >
-                    Limpiar
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {error && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-2xl text-red-200">
-                {error}
-              </div>
-            )}
-
-            {description && (
-              <div className="mt-4 p-4 bg-blue-500/20 border border-blue-500/50 rounded-2xl">
-                <h3 className="font-bold mb-2">Descripcion detectada:</h3>
-                <p className="text-sm text-gray-300">{description}</p>
-              </div>
-            )}
-          </section>
-
-          {/* Output Section */}
-          <section className="bg-white/10 backdrop-blur-lg rounded-3xl p-6">
-            <h2 className="text-2xl font-bold mb-4">Tu Meme</h2>
-
-            <div className="flex items-center justify-center w-full min-h-[400px] bg-white/5 rounded-2xl overflow-hidden">
-              {memeImage ? (
-                <img
-                  src={`data:image/png;base64,${memeImage}`}
-                  alt="Generated meme"
-                  className="max-w-full max-h-[500px] object-contain"
-                />
-              ) : (
-                <div className="text-center text-gray-500">
-                  <svg
-                    className="w-24 h-24 mx-auto mb-4 opacity-30"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <p>Tu meme aparecera aqui</p>
-                </div>
-              )}
-            </div>
-
-            {memeImage && (
-              <a
-                href={`data:image/png;base64,${memeImage}`}
-                download="meme.png"
-                className="block w-full mt-4 py-3 text-center bg-green-500 hover:bg-green-600 rounded-2xl font-bold transition-all"
-              >
-                Descargar Meme
-              </a>
-            )}
-          </section>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Historial ({history.length})
+            </button>
+          )}
         </div>
 
-        {/* Footer */}
-        <footer className="mt-12 text-center text-gray-500">
-          <p>
-            Creado con{" "}
-            <a
-              href="https://ai-sdk.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pink-500 hover:underline"
+        {/* Historial */}
+        {showHistory && (
+          <div className="bg-white/5 rounded-lg p-4 space-y-2">
+            <p className="text-sm text-gray-400 mb-2">Sesiones anteriores:</p>
+            {history.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => loadSession(s)}
+                className="w-full text-left px-3 py-2 bg-white/5 rounded hover:bg-white/10 transition flex items-center gap-2"
+              >
+                <span>🎨</span>
+                <span className="flex-1 truncate">{s.title}</span>
+                <span className="text-xs text-gray-500">
+                  {new Date(s.createdAt).toLocaleDateString()}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Input */}
+        <div className="flex gap-2">
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Título del video..."
+            className="flex-1 bg-white/10 rounded px-4 py-2 outline-none focus:ring-2 ring-orange-500"
+            onKeyDown={(e) => e.key === "Enter" && !previews.length && explore()}
+          />
+          {previews.length > 0 ? (
+            <button
+              onClick={newSession}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded font-medium transition"
             >
-              AI SDK 6
-            </a>{" "}
-            +{" "}
-            <a
-              href="https://openai.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-pink-500 hover:underline"
+              Nueva
+            </button>
+          ) : (
+            <button
+              onClick={explore}
+              disabled={loadingPreviews || !title.trim()}
+              className="px-6 py-2 bg-orange-500 rounded font-medium disabled:opacity-50"
             >
-              OpenAI gpt-image-1
-            </a>
-          </p>
-        </footer>
-      </main>
-    </article>
+              {loadingPreviews ? "..." : "Explorar"}
+            </button>
+          )}
+        </div>
+
+        {/* Loading Previews */}
+        {loadingPreviews && (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-2 border-orange-500/30 border-t-orange-500 rounded-full animate-spin" />
+            <span className="ml-3 text-gray-400">Generando 4 propuestas...</span>
+          </div>
+        )}
+
+        {/* Contenido principal */}
+        {previews.length > 0 && (
+          <div className="flex-1 min-h-0 flex flex-col gap-3">
+
+            {/* VISTA: Formatos generados (principal) */}
+            {selected?.formats && (
+              <div className="flex-1 min-h-0 flex flex-col gap-3">
+                <p className="text-sm text-gray-400 shrink-0">Formatos generados:</p>
+                <div className="flex-1 min-h-0 flex gap-4 items-stretch justify-center">
+                  {selected.formats.map((f) => (
+                    <div key={f.format} className="flex flex-col items-center group">
+                      <div className="flex-1 min-h-0 relative">
+                        <img
+                          src={`data:image/png;base64,${f.image}`}
+                          alt={f.format}
+                          className="h-full w-auto rounded-lg cursor-pointer hover:ring-2 ring-orange-500 transition object-contain"
+                          onClick={() => setZoomed(f.image)}
+                        />
+                        <button
+                          onClick={() => download(f.image, f.format)}
+                          className="absolute bottom-2 right-2 p-2 bg-black/70 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-black"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2 capitalize">{f.format}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* VISTA: Grid grande (cuando no hay formatos) */}
+            {!selected?.formats && !loadingFormats && (
+              <>
+                <p className="text-sm text-gray-400 shrink-0">Elige un estilo:</p>
+                <div className="grid grid-cols-2 grid-rows-2 gap-3 flex-1 min-h-0">
+                  {previews.map((p) => (
+                    <div key={p.id} className="relative group min-h-0">
+                      <button
+                        onClick={() => setSelectedId(selectedId === p.id ? null : p.id)}
+                        className={`w-full h-full rounded-xl overflow-hidden border-4 transition ${
+                          selected?.id === p.id
+                            ? "border-orange-500 ring-4 ring-orange-500/30"
+                            : "border-transparent hover:border-white/20"
+                        }`}
+                      >
+                        <img src={`data:image/png;base64,${p.image}`} alt="" className="w-full h-full object-contain bg-black/20" />
+                        <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-xs flex items-center gap-1">
+                          {STYLE_INFO[p.style].emoji} {STYLE_INFO[p.style].label}
+                          {p.formats && <span className="text-green-400 ml-1">✓</span>}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setZoomed(p.image)}
+                        className="absolute top-3 right-3 p-2 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition hover:bg-black/80"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* Loading Formats */}
+            {loadingFormats && (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-3 border-orange-500/30 border-t-orange-500 rounded-full animate-spin mx-auto" />
+                  <p className="mt-4 text-gray-400">Generando 3 formatos...</p>
+                </div>
+              </div>
+            )}
+
+            {/* Mini grid (cuando hay formatos) */}
+            {selected?.formats && (
+              <div className="shrink-0 bg-white/5 rounded-lg p-3">
+                <div className="flex gap-3 items-center justify-center">
+                  {previews.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSelectedId(p.id)}
+                      className={`relative rounded-lg overflow-hidden border-2 transition flex flex-col items-center ${
+                        selected?.id === p.id
+                          ? "border-orange-500"
+                          : "border-transparent hover:border-white/30"
+                      }`}
+                    >
+                      <img
+                        src={`data:image/png;base64,${p.image}`}
+                        alt=""
+                        className="h-14 w-14 object-cover"
+                      />
+                      <span className="text-[10px] text-gray-400 py-1">
+                        {STYLE_INFO[p.style].emoji} {p.formats ? "✓" : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Botón generar formatos */}
+            {selected && !loadingFormats && !selected.formats && (
+              <button
+                onClick={generate}
+                className="shrink-0 w-full py-3 bg-orange-500 rounded-lg font-medium hover:bg-orange-600 transition text-lg"
+              >
+                Generar formatos de {STYLE_INFO[selected.style].emoji} {STYLE_INFO[selected.style].label} →
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Zoom Modal */}
+        {zoomed && (
+          <div
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-8"
+            onClick={() => setZoomed(null)}
+          >
+            <button
+              className="absolute top-4 right-4 text-white/70 hover:text-white"
+              onClick={() => setZoomed(null)}
+            >
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+              <img
+                src={`data:image/png;base64,${zoomed}`}
+                alt=""
+                className="max-w-full max-h-[80vh] rounded-lg"
+              />
+              <button
+                onClick={() => download(zoomed, "propuesta")}
+                className="px-4 py-2 bg-white text-black rounded-lg font-medium flex items-center gap-2 hover:bg-gray-100"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Descargar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
-
-export default App;

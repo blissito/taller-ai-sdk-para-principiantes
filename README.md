@@ -1,177 +1,156 @@
-# Generación de imágenes con AI SDK
+# Ejercicio 07: Generador de Thumbnails
 
-En este ejercicio exploramos `generateImage` del AI SDK para crear un **generador de memes**. Combinamos visión (análisis de fotos) con generación de imágenes para crear memes personalizados.
+Generador de thumbnails con IA usando AI SDK 6. El flujo tiene dos pasos: explorar propuestas visuales y generar formatos para diferentes plataformas.
 
-## Conceptos clave
+## Flujo de la aplicación
+
+```
+[Título del video]
+       ↓
+   PASO 1: Explorar
+       ↓
+┌─────────────────────────────┐
+│  🎨 Vibrante   ✨ Mínimo    │  ← 4 propuestas (1 por estilo)
+│  🎬 Dramático  🚀 Tech      │
+└─────────────────────────────┘
+       ↓ (seleccionar una)
+   PASO 2: Generar formatos
+       ↓
+┌─────────────────────────────┐
+│  YouTube · Instagram · Story │  ← 3 formatos diferentes
+└─────────────────────────────┘
+```
+
+## Conceptos del AI SDK
 
 ### generateImage
 
-Esta función nos permite generar imágenes usando modelos como DALL-E o GPT Image:
+Genera imágenes a partir de texto:
 
 ```ts
 import { generateImage } from "ai";
 import { openai } from "@ai-sdk/openai";
 
-const imageModel = openai.image("gpt-image-1");
-
-const result = await generateImage({
-  model: imageModel,
-  prompt: "Un gato programando en TypeScript",
+const { image } = await generateImage({
+  model: openai.image("gpt-image-1"),
+  prompt: "Un paisaje futurista al atardecer",
   size: "1024x1024",
-  providerOptions: {
-    openai: {
-      style: "vivid", // o "natural"
-    },
-  },
 });
 
-// La imagen viene en base64
-const imageBase64 = result.image.base64;
+const base64 = image.base64;
 ```
 
-### Combinando visión + generación
+### generateText + generateImage (Pipeline)
 
-El flujo de este generador de memes es interesante porque combina dos capacidades:
-
-1. **Analizar** una foto con un modelo de visión
-2. **Generar** un meme basado en esa descripción
+Usamos GPT para crear prompts optimizados antes de generar la imagen:
 
 ```ts
-import { generateText, generateImage } from "ai";
-import { openai } from "@ai-sdk/openai";
+// 1. GPT-4o-mini crea un prompt optimizado
+const { text: prompt } = await generateText({
+  model: openai("gpt-4o-mini"),
+  prompt: `Crea un prompt de imagen para: "${titulo}"`,
+});
 
-const visionModel = openai("gpt-4o-mini");
-const imageModel = openai.image("gpt-image-1");
-
-// 1. Analizar la foto
-async function analyzePhoto(imageBase64: string): Promise<string> {
-  const result = await generateText({
-    model: visionModel,
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: "Describe a esta persona de forma detallada...",
-          },
-          {
-            type: "image",
-            image: imageBase64,
-          },
-        ],
-      },
-    ],
-  });
-  return result.text;
-}
-
-// 2. Generar el meme
-async function generateMeme(
-  personDescription: string,
-  context: string
-): Promise<string> {
-  const result = await generateImage({
-    model: imageModel,
-    prompt: `Create a funny meme. Subject: ${personDescription}. Situation: ${context}`,
-    size: "1024x1024",
-  });
-  return result.image.base64;
-}
+// 2. El modelo de imagen genera con ese prompt
+const { image } = await generateImage({
+  model: openai.image("gpt-image-1"),
+  prompt,
+});
 ```
 
-### El flujo completo
+### OpenAI images.edit
 
-La función principal encadena ambos pasos:
+Para redimensionar manteniendo el estilo, usamos la API de edición:
 
 ```ts
-export async function createMemeFromPhoto(
-  photoBase64: string,
-  memeContext: string
-) {
-  // Primero analizamos la foto
-  const description = await analyzePhoto(photoBase64);
+import OpenAI, { toFile } from "openai";
 
-  // Luego generamos el meme
-  const memeImage = await generateMeme(description, memeContext);
+const openai = new OpenAI();
 
-  return { description, memeImage };
-}
-```
-
-## Servidor con Hono
-
-Usamos Hono como servidor (más ligero que Express):
-
-```ts
-import { Hono } from "hono";
-import { createMemeFromPhoto, generateMemeFromText } from "./index.js";
-
-const app = new Hono();
-
-// Meme desde foto + contexto
-app.post("/api/meme/from-photo", async (c) => {
-  const { photo, context } = await c.req.json();
-  const result = await createMemeFromPhoto(photo, context);
-  return c.json(result);
+const response = await openai.images.edit({
+  model: "gpt-image-1",
+  image: await toFile(Buffer.from(base64, "base64"), "ref.png"),
+  prompt: "Mantén el mismo diseño y estilo",
+  size: "1536x1024", // YouTube landscape
 });
 
-// Meme solo desde texto
-app.post("/api/meme/from-text", async (c) => {
-  const { prompt } = await c.req.json();
-  const memeImage = await generateMemeFromText(prompt);
-  return c.json({ memeImage });
-});
+const resultado = response.data[0].b64_json;
 ```
 
-## Cliente React
+## Tamaños por plataforma
 
-El cliente permite subir una foto o escribir un prompt directamente:
+| Formato   | Tamaño    | Uso                    |
+| --------- | --------- | ---------------------- |
+| YouTube   | 1536x1024 | Thumbnails, Twitter    |
+| Instagram | 1024x1024 | Posts cuadrados        |
+| Story     | 1024x1536 | Stories, Reels, TikTok |
 
-```tsx
-// Modo foto: seleccionar imagen
-const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const result = event.target?.result as string;
-    const base64 = result.split(",")[1]; // Solo el base64
-    setPhotoBase64(base64);
-  };
-  reader.readAsDataURL(file);
-};
+## Estilos disponibles
 
-// Generar meme
-const response = await fetch("/api/meme/from-photo", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ photo: photoBase64, context: prompt }),
-});
+| Estilo   | Descripción                            |
+| -------- | -------------------------------------- |
+| Vibrant  | Colores vivos, alto contraste          |
+| Minimal  | Limpio, espacios blancos               |
+| Dramatic | Cinematográfico, tonos oscuros         |
+| Tech     | Futurista, acentos neón                |
+
+## Estructura del proyecto
+
+```
+├── thumbnail-generator.ts   # Lógica de generación
+├── server.ts                # API con Hono
+└── client/
+    └── src/
+        └── App.tsx          # UI React
 ```
 
-## Archivos principales
+## API Endpoints
 
-| Archivo | Descripción |
-|---------|-------------|
-| `meme-generator.ts` | Funciones de análisis y generación de memes |
-| `server.ts` | Servidor Hono con endpoints de la API |
-| `client/src/App.tsx` | UI para subir fotos y generar memes |
+```bash
+# Paso 1: Genera 4 previews (1 por estilo)
+POST /api/previews
+{ "title": "Nuevo curso de React" }
+
+# Paso 2: Genera 3 formatos desde una referencia
+POST /api/formats
+{ "reference": "<base64>", "prompt": "<prompt usado>" }
+
+# Estilos disponibles
+GET /api/styles
+```
 
 ## Ejecución
 
 ```bash
+# Instalar dependencias
 npm install
 cd client && npm install && cd ..
+
+# Iniciar servidor (puerto 3000)
 npm run dev
+
+# En otra terminal, iniciar cliente (puerto 5173)
+cd client && npm run dev
 ```
 
-## Resultado
+Abre http://localhost:5173
 
-- **Modo texto:** Escribe un prompt y genera un meme directamente
-- **Modo foto:** Sube una foto, agrega contexto, y el sistema:
-  1. Analiza la foto con GPT-4o Vision
-  2. Genera un meme caricaturizado basado en la descripción
+## Costos aproximados
 
-El modelo de visión describe a la persona/escena, y luego el modelo de imágenes crea una versión meme.
+| Paso     | Modelo            | Costo estimado |
+| -------- | ----------------- | -------------- |
+| Previews | gpt-image-1-mini  | ~$0.04 × 4     |
+| Formatos | gpt-image-1 (edit)| ~$0.05 × 3     |
+| **Total**|                   | **~$0.31/sesión** |
 
-Que lo disfrutes. Abrazo. bliss 🦾
+## Lo que aprenderás
+
+1. **generateImage** - Generar imágenes con AI SDK
+2. **Pipeline texto→imagen** - Optimizar prompts con LLM
+3. **images.edit** - Redimensionar manteniendo estilo
+4. **Promise.allSettled** - Manejar fallos parciales
+5. **Diferentes sizes** - Adaptar a múltiples plataformas
+
+---
+
+Que lo disfrutes. Abrazo. bliss

@@ -1,100 +1,76 @@
+import "dotenv/config";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
-import {
-  createMemeFromPhoto,
-  generateMemeFromText,
-  analyzePhoto,
-} from "./index.js";
+import { generatePreviews, generateFormats, STYLES, type Style } from "./thumbnail-generator.js";
 
-const PORT = Number(process.env.PORT) || 3000;
 const app = new Hono();
 
-// Endpoint para generar meme desde foto + contexto
-app.post("/api/meme/from-photo", async (c) => {
+// Parsear errores de OpenAI para mensajes amigables
+function parseError(error: unknown): string {
+  const msg = error instanceof Error ? error.message : String(error);
+
+  if (msg.includes("insufficient_quota") || msg.includes("exceeded your current quota")) {
+    return "Sin créditos de OpenAI. Agrega fondos en platform.openai.com/settings/organization/billing";
+  }
+  if (msg.includes("rate_limit")) {
+    return "Límite de velocidad alcanzado. Espera unos segundos e intenta de nuevo.";
+  }
+  if (msg.includes("invalid_api_key")) {
+    return "API key de OpenAI inválida. Verifica tu configuración.";
+  }
+
+  return msg;
+}
+
+// PASO 1: Genera 4 previews (1 por estilo)
+app.post("/api/previews", async (c) => {
   try {
-    const { photo, context } = await c.req.json<{
-      photo: string; // Base64
-      context: string; // El contexto del meme
+    const { title } = await c.req.json<{ title: string }>();
+
+    if (!title) return c.json({ error: "Falta título" }, 400);
+
+    console.log(`\n🎨 Generando 4 previews (1 por estilo): "${title}"`);
+    const result = await generatePreviews(title);
+    console.log("✅ Previews listos");
+
+    return c.json(result);
+  } catch (error) {
+    const message = parseError(error);
+    console.error("❌ Error en /api/previews:", message);
+    return c.json({ error: message }, 500);
+  }
+});
+
+// PASO 2: Genera 3 formatos desde referencia
+app.post("/api/formats", async (c) => {
+  try {
+    const { reference, prompt } = await c.req.json<{
+      reference: string;
+      prompt: string;
     }>();
 
-    if (!photo || !context) {
-      return c.json({ error: "Se requiere photo y context" }, 400);
-    }
+    if (!reference || !prompt) return c.json({ error: "Falta referencia o prompt" }, 400);
 
-    console.log("📸 Recibida solicitud de meme desde foto");
-    const result = await createMemeFromPhoto(photo, context);
+    console.log("\n🖼️ Generando 3 formatos desde referencia...");
+    const formats = await generateFormats(reference, prompt);
+    console.log("✅ Formatos listos");
 
-    return c.json({
-      success: true,
-      description: result.description,
-      memeImage: result.memeImage,
-    });
+    return c.json({ formats });
   } catch (error) {
-    console.error("Error generando meme:", error);
-    return c.json(
-      { error: "Error al generar el meme", details: String(error) },
-      500
-    );
+    const message = parseError(error);
+    console.error("❌ Error en /api/formats:", message);
+    return c.json({ error: message, formats: [] }, 500);
   }
 });
 
-// Endpoint para analizar solo la foto (sin generar meme)
-app.post("/api/meme/analyze", async (c) => {
-  try {
-    const { photo } = await c.req.json<{ photo: string }>();
+// Estilos disponibles
+app.get("/api/styles", (c) => c.json(STYLES));
 
-    if (!photo) {
-      return c.json({ error: "Se requiere photo" }, 400);
-    }
-
-    console.log("📸 Analizando foto...");
-    const description = await analyzePhoto(photo);
-
-    return c.json({
-      success: true,
-      description,
-    });
-  } catch (error) {
-    console.error("Error analizando foto:", error);
-    return c.json(
-      { error: "Error al analizar la foto", details: String(error) },
-      500
-    );
-  }
-});
-
-// Endpoint para generar meme solo desde texto
-app.post("/api/meme/from-text", async (c) => {
-  try {
-    const { prompt } = await c.req.json<{ prompt: string }>();
-
-    if (!prompt) {
-      return c.json({ error: "Se requiere prompt" }, 400);
-    }
-
-    console.log("🎨 Generando meme desde texto:", prompt);
-    const memeImage = await generateMemeFromText(prompt);
-
-    return c.json({
-      success: true,
-      memeImage,
-    });
-  } catch (error) {
-    console.error("Error generando meme:", error);
-    return c.json(
-      { error: "Error al generar el meme", details: String(error) },
-      500
-    );
-  }
-});
-
-// Servir estáticos del cliente compilado
+// Static files
 app.use("/*", serveStatic({ root: "./client/dist" }));
-
-// Fallback SPA: rutas no encontradas -> index.html
 app.use("/*", serveStatic({ root: "./client/dist", path: "index.html" }));
 
-serve({ fetch: app.fetch, port: PORT }, (info) => {
-  console.info(`🚀 Meme Generator running on port: ${info.port}`);
+serve({ fetch: app.fetch, port: 3000 }, () => {
+  console.log("\n🎨 Thumbnail Generator → http://localhost:3000");
 });
