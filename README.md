@@ -137,11 +137,13 @@ Abre http://localhost:5173
 
 ## Costos aproximados
 
-| Paso     | Modelo            | Costo estimado |
-| -------- | ----------------- | -------------- |
-| Previews | gpt-image-1-mini  | ~$0.04 × 4     |
-| Formatos | gpt-image-1 (edit)| ~$0.05 × 3     |
-| **Total**|                   | **~$0.31/sesión** |
+| Paso     | Modelo            | USD        | MXN         |
+| -------- | ----------------- | ---------- | ----------- |
+| Previews | gpt-image-1-mini  | ~$0.04 × 4 | ~$0.80 × 4  |
+| Formatos | gpt-image-1 (edit)| ~$0.05 × 3 | ~$1.00 × 3  |
+| **Total**|                   | **~$0.31** | **~$6.20**  |
+
+*Tipo de cambio: 1 USD ≈ 20 MXN*
 
 ## Lo que aprenderás
 
