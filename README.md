@@ -192,4 +192,6 @@ Ahora que tienes tu propio asistente IA es momento de que le pongas $5 pesitos d
 
 ---
 
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Abrazo. bliss. 🤓
