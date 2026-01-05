@@ -145,4 +145,6 @@ Pero, si aún te sientes principiante y quieres ir más despacio, siempre puedes
 
 ---
 
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Que lo disfrutes. Abrazo. bliss 🤓
