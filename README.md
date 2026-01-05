@@ -204,7 +204,7 @@ Esta es una demostración de cómo podemos enviar mensajes junto con el contexto
 - Archivos grandes pueden exceder el límite de tokens
 - No hay búsqueda semántica (todo el contenido va al prompt)
 
-Para poder pensar en cientos de archivos hay que pensar en miles de pedacitos. 🧱 Y eso es justo lo que haremos en el siguiente ejercicio: haremos todos estos archivos pedacitos y los pondremos en una base de datos con embeddings. 🔎
+Para poder pensar en cientos de archivos hay que pensar en miles de pedacitos. 🧱 Y eso es justo lo que haremos en el siguiente ejercicio: haremos todos estos archivos pedacitos y los almacenaremos con embeddings. 🔎
 
 ## Estructura del proyecto
 
