@@ -215,4 +215,8 @@ El agente decide cuándo llamar `generateCode`, genera el ejemplo, y luego lo ex
 
 `ToolLoopAgent` es más declarativo y encapsula el comportamiento del agente en una clase reutilizable.
 
+---
+
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Que lo disfrutes. Abrazo. bliss 🦾
