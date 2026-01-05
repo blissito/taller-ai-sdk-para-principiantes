@@ -1,6 +1,8 @@
-# Ejercicio 01: Streaming con Vanilla JS
+# Ejercicio 01: Recibiendo streams con puro VanillaJS
 
-Creamos un servidor Express que expone un endpoint de chat y consumimos el stream desde el navegador usando JavaScript puro (sin frameworks).
+En este ejercicio exploraremos el trabajo cliente/servidor que se requiere para recibir y manipular `streams` de manera nativa. 🍛
+
+Para el backend usaremos la herramienta que Vercel ya nos provee: `pipeTextStreamToResponse` y para el cliente: el tradicional `TextDecoder()` usando el reader que ya viene en la respuesta. ✅
 
 ## Flujo de la aplicación
 
@@ -20,51 +22,67 @@ Creamos un servidor Express que expone un endpoint de chat y consumimos el strea
 └─────────────────────────────────────────────────────────┘
 ```
 
-## Conceptos del AI SDK
+## El cambio en la arquitectura
 
-### pipeTextStreamToResponse
+Tenemos una carpeta `public/` en la que colocaremos los archivos estáticos del cliente. En esta simplificación son solo dos:
+`client.js` e `index.html`.
 
-Envía el stream de texto directamente al Response de Express:
+`index.html` solo aporta el markup básico y la referencia al pedacito de **JS** que se requiere:
+
+```html
+<h1>Blissmo Chat Stream Demo</h1>
+<button id="start">Iniciar Stream</button>
+<div id="output"></div>
+<!--
+
+  Toma nota cómo se consigue el archivo JS,
+  solicitando el script en la raiz del sitio. 🤓
+  Recuerda que este archivo es un estático. 🎼
+
+-->
+<script type="module" src="/client.js"></script>
+```
+
+Los archivos estáticos son provistos por:
 
 ```ts
-import express from "express";
-import { chat } from ".";
+app.use(express.static("public")); // home page
+```
 
-const app = express();
+Esto garantiza que la carpeta `public` se sirve de manera estática. ✅
 
-app.get("/api/chat", async (_, res) => {
+## Mientras que el backend se prepara en la ruta api/chat
+
+Usamos la función chat de nuestro archivo `index.ts`, que es el origen de la inferencia. 🫆
+
+```ts
+app.get("/api/chat", (_, res) => {
   const result = chat("crea un poema sobre robots");
-  result.pipeTextStreamToResponse(res); // ← Pipe directo
+  result.pipeTextStreamToResponse(res); // aquí una función fancy del StreamTextResult 🎀
 });
 ```
+
+No hace falta una función asíncrona cuando hacemos pipe. ⚡️
+Para responder al cliente usamos la utilidad para hacer pipe con `res` del **AI-SDK**.
 
 | Método | Framework | Descripción |
 |--------|-----------|-------------|
 | `pipeTextStreamToResponse(res)` | Express | Pipe a response de Express |
 | `toTextStreamResponse()` | Hono/Web | Retorna Response estándar |
 
-## Cliente: Consumiendo el stream
+## ¿Cómo consume el cliente este endpoint?
 
-### Paso 1: Hacer fetch y obtener el reader
+Si vamos a `client.js` veremos que hemos detectado el clic en el botón y que detonamos un loop infinito:
 
-```js
-const response = await fetch("/api/chat");
-const reader = response.body.getReader();
-```
-
-`response.body` es un `ReadableStream<Uint8Array>`. Usamos `.getReader()` para leerlo chunk por chunk.
-
-### Paso 2: Decodificar y mostrar
-
-```js
-const decoder = new TextDecoder();
-
+```ts
 while (true) {
   const { done, value } = await reader.read();
   if (done) break;
-  output.textContent += decoder.decode(value);
+  output.textContent += decoder.decode(value); // lo volvemos texto
 }
 ```
+
+Rompemos el loop si el _reader_ devuelve `done` junto con el `value`. 🤔 Pero, mientras `done` sea falso, seguiremos añadiendo el texto decodificado al nodo `#output`. 📝
 
 | Variable | Tipo | Descripción |
 |----------|------|-------------|
@@ -94,26 +112,7 @@ async function startStream() {
 button.addEventListener("click", startStream);
 ```
 
-## Servidor Express
-
-```ts
-// server.ts
-import express from "express";
-import { chat } from ".";
-
-const app = express();
-
-// Servir archivos estáticos desde /public
-app.use(express.static("public"));
-
-// Endpoint de chat con streaming
-app.get("/api/chat", async (_, res) => {
-  const result = chat("crea un poema sobre robots");
-  result.pipeTextStreamToResponse(res);
-});
-
-app.listen(3000);
-```
+`response.body` es un `ReadableStream<Uint8Array>`. Usamos `.getReader()` para leerlo chunk por chunk.
 
 ## Estructura del proyecto
 
@@ -133,13 +132,11 @@ npm run dev
 # Abre http://localhost:3000
 ```
 
-## Limitaciones
+## Conclusión
 
-- El prompt está hardcodeado en el servidor
-- No hay input del usuario
-- No hay historial de conversación
+En este ejercicio no nos preocupamos aún por enviar el prompt desde el cliente, ejecutamos uno pre-definido. Esto, para entender mejor cómo se hace a nivel plataforma. 🤓👩🏻‍💻
 
-En el siguiente ejercicio agregaremos React + useChat para una experiencia de chat completa.
+En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, pero lo haremos ya con Vite y React. 💬⚛
 
 ## Lo que aprenderás
 
@@ -151,4 +148,4 @@ En el siguiente ejercicio agregaremos React + useChat para una experiencia de ch
 
 ---
 
-Que lo disfrutes. Abrazo. bliss
+Que lo disfrutes. Abrazo. bliss 🤓
