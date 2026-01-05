@@ -1,6 +1,6 @@
-# Ejercicio 04: Embeddings y RAG
+# Ejercicio 04: Contexto en pedacitos vectorizados
 
-Implementamos un sistema RAG (Retrieval Augmented Generation) que permite subir archivos, convertirlos en embeddings vectoriales, y hacer preguntas con contexto semántico relevante.
+Ahora vamos a no solo tomar un archivo, sino varios; muchos archivos que formarán parte del contexto pero con un sistema de pedacitos implementado, esto es una búsqueda por similitud dentro de una base de datos. 🔎📊
 
 ## Flujo de la aplicación
 
@@ -27,11 +27,21 @@ Implementamos un sistema RAG (Retrieval Augmented Generation) que permite subir 
 [Respuesta con contexto]
 ```
 
-## Conceptos del AI SDK
+## Para crear esta experiencia vamos a necesitar que el servidor crezca
+
+Añadiremos 2 rutas nuevas al servidor:
+
+```ts
+"/api/embed" y "/api/search"
+```
+
+Con `api/embed` vamos a recibir el contenido de un archivo para hacerlo pedacitos y guardarlo con todo y vectores que usaremos para búsqueda semántica. Y, con `api/search` haremos la búsqueda semántica y conseguiremos solo los _chunks_ adecuados. ✅
+
+## Las funciones del AI SDK que necesitamos
 
 ### embedMany
 
-Genera embeddings para múltiples textos en una sola llamada:
+Genera embeddings para múltiples textos en una sola llamada. Así vectorizamos todos los pedacitos de un archivo de un jalón:
 
 ```ts
 import { embedMany } from "ai";
@@ -45,12 +55,12 @@ const { embeddings } = await embedMany({
 });
 
 // embeddings es un array de vectores (number[][])
-console.log(embeddings[0].length); // 1536 dimensiones
+console.log(embeddings[0].length); // 1536 dimensiones 🤯
 ```
 
 ### embed
 
-Genera embedding para un solo texto (útil para la query del usuario):
+Genera embedding para un solo texto. Útil para la query del usuario:
 
 ```ts
 import { embed } from "ai";
@@ -63,7 +73,7 @@ const { embedding } = await embed({
 
 ### cosineSimilarity
 
-Calcula la similitud entre dos vectores (0 = nada similar, 1 = idénticos):
+Calcula la similitud entre dos vectores (0 = nada similar, 1 = idénticos). Esta es la magia de la búsqueda semántica. ✨
 
 ```ts
 import { cosineSimilarity } from "ai";
@@ -81,6 +91,8 @@ const similarity = cosineSimilarity(vectorA, vectorB);
 | `cosineSimilarity` | Comparar dos vectores | `number` (0 a 1) |
 
 ## Chunking: Dividir texto en pedazos
+
+Para poder pensar en cientos de archivos hay que pensar en miles de pedacitos. 🧱
 
 El archivo `chunking.ts` implementa varias estrategias para dividir texto:
 
@@ -101,22 +113,40 @@ const chunks = chunkText(contenido, {
 | `line` | Divide por líneas |
 | `size` | Divide por tamaño fijo con overlap |
 
-### Tipo Chunk
+## En el cliente tenemos un par de funciones en App.tsx
+
+Que nos sirven para mandar el archivo a `api/embed` cuando el usuario lo seleccione, para ser procesado y hasta actualizamos su estado cuando ya está listo:
 
 ```ts
-type Chunk = {
-  content: string;
-  index: number;
-  metadata: {
-    filename?: string;
-    section?: string;
-  };
-};
+const handleFileChange = useCallback(
+  async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+
+    for (const file of Array.from(e.target.files)) {
+      // Agregar archivo con estado "loading"
+      setEmbeddedFiles((prev) => [
+        ...prev,
+        { name: file.name, chunksCount: 0, status: "loading" },
+      ]);
+
+      const content = await readFileContent(file);
+
+      // Enviar al backend para crear embeddings
+      const response = await fetch("/api/embed", {
+        method: "POST",
+        body: JSON.stringify({ content, filename: file.name, sessionId }),
+      });
+
+      // Actualizar estado a "ready" ✅
+    }
+  },
+  [sessionId]
+);
 ```
 
-## Pipeline RAG completo
+## El endpoint /api/embed - Procesar archivo
 
-### 1. Endpoint `/api/embed` - Procesar archivo
+Aquí es donde la magia sucede. Recibimos el archivo, lo hacemos pedacitos y generamos sus vectores:
 
 ```ts
 app.post("/api/embed", async (req, res) => {
@@ -138,7 +168,9 @@ app.post("/api/embed", async (req, res) => {
 });
 ```
 
-### 2. Búsqueda semántica
+## La búsqueda semántica
+
+Cuando el usuario hace una pregunta, buscamos los chunks más relevantes:
 
 ```ts
 export async function findSimilarChunks(
@@ -167,28 +199,9 @@ export async function findSimilarChunks(
 }
 ```
 
-### 3. Endpoint `/api/chat` - RAG
+## RAG: Inyectando el contexto
 
-```ts
-app.post("/api/chat", async (req, res) => {
-  const { messages, sessionId } = req.body;
-
-  // Buscar chunks relevantes para la pregunta
-  const lastMessage = messages[messages.length - 1];
-  const userQuery = lastMessage.parts?.find((p) => p.type === "text")?.text;
-
-  const similar = await findSimilarChunks(sessionId, userQuery, 3);
-  const contextChunks = similar.map(
-    (s) => `[Similitud: ${(s.similarity * 100).toFixed(1)}%] ${s.chunk.content}`
-  );
-
-  // Pasar contexto a la función chat
-  const result = chat(messages, contextChunks);
-  result.pipeUIMessageStreamToResponse(res);
-});
-```
-
-### 4. Inyección en system prompt
+Finalmente, inyectamos los chunks relevantes en el system prompt. El modelo ahora tiene contexto específico para responder:
 
 ```ts
 export const chat = (messages: UIMessage[], contextChunks: string[] = []) => {
@@ -205,27 +218,6 @@ export const chat = (messages: UIMessage[], contextChunks: string[] = []) => {
 };
 ```
 
-## Interfaz del cliente
-
-El cliente muestra los archivos procesados con su estado:
-
-```tsx
-type EmbeddedFile = {
-  name: string;
-  chunksCount: number;
-  status: "loading" | "ready" | "error";
-};
-
-// Al subir archivo, enviar a /api/embed
-const response = await fetch("/api/embed", {
-  method: "POST",
-  body: JSON.stringify({ content, filename, sessionId }),
-});
-
-// Al enviar mensaje, incluir sessionId
-sendMessage({ text: input }, { body: { sessionId } });
-```
-
 ## Estructura del proyecto
 
 ```
@@ -239,22 +231,6 @@ sendMessage({ text: input }, { body: { sessionId } });
         └── App.tsx    # UI con estado de archivos embebidos
 ```
 
-## API Endpoints
-
-```bash
-# Crear embeddings de un archivo
-POST /api/embed
-{ "content": "...", "filename": "doc.txt", "sessionId": "uuid" }
-
-# Buscar chunks similares (debug)
-POST /api/search
-{ "query": "precio del producto", "sessionId": "uuid", "topK": 3 }
-
-# Chat con RAG
-POST /api/chat
-{ "messages": [...], "sessionId": "uuid" }
-```
-
 ## Ejecución
 
 ```bash
@@ -264,6 +240,8 @@ npm run dev
 ```
 
 ## Limitaciones actuales
+
+Esta es una demostración pero que **no escala bien** para producción. 😗
 
 - Almacenamiento en memoria (se pierde al reiniciar)
 - Sin persistencia de embeddings
@@ -284,4 +262,4 @@ Para producción, considera usar una base de datos vectorial como:
 
 ---
 
-Que lo disfrutes. Abrazo. bliss
+Que lo disfrutes. Abrazo. bliss 🦾
