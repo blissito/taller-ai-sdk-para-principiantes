@@ -1,6 +1,8 @@
 # Ejercicio 06: Artifacts con createUIMessageStream
 
-Implementamos un patrón de "artifacts" donde generamos código en un panel separado mientras el chat explica lo generado. Usamos `createUIMessageStream` para enviar datos personalizados al cliente.
+¿Has visto cómo Claude o ChatGPT muestran código en un panel separado mientras te explican qué hace? Eso es el patrón de **artifacts**. Y en este ejercicio vamos a implementarlo. 🎨
+
+La idea es simple: generar código en un lugar, y explicarlo en otro. Pero el modelo tiene que **saber** qué código generó para poder explicarlo. Eso es lo que llamamos un chat "artifact-aware".
 
 ## Flujo de la aplicación
 
@@ -31,11 +33,15 @@ Implementamos un patrón de "artifacts" donde generamos código en un panel sepa
 └──────────────────┴──────────────────┘
 ```
 
-## Conceptos del AI SDK
+## El problema que resolvemos
 
-### createUIMessageStream
+Cuando usamos `streamText`, los chunks de texto van al chat. Pero ¿qué pasa si queremos enviar **otro tipo de datos** al cliente? Por ejemplo, código que debe ir a un panel separado.
 
-Crea un stream que permite enviar diferentes tipos de datos al cliente:
+Aquí es donde entra `createUIMessageStream`. Nos permite enviar datos personalizados al cliente. 🚀
+
+## createUIMessageStream: La herramienta clave
+
+Esta función crea un stream que permite enviar diferentes tipos de datos:
 
 ```ts
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
@@ -45,13 +51,13 @@ const stream = createUIMessageStream({
     // Señalar inicio
     writer.write({ type: "start" });
 
-    // Enviar datos personalizados
+    // Enviar datos personalizados (van al artifact)
     writer.write({
       type: "data-custom",
-      data: { custom: "contenido para artifact" },
+      data: { custom: "código aquí" },
     });
 
-    // Combinar con stream de texto
+    // Combinar con stream de texto (va al chat)
     const result = streamText({ model, prompt });
     writer.merge(result.toUIMessageStream());
   },
@@ -67,9 +73,9 @@ return createUIMessageStreamResponse({ stream });
 | `writer.merge(stream)` | Combina con otro stream |
 | `createUIMessageStreamResponse({ stream })` | Crea Response HTTP |
 
-### Patrón artifact-aware
+## El patrón artifact-aware
 
-El modelo conoce el código generado para explicarlo:
+La clave está en que el chat **conozca** el código generado. Primero generamos el código, lo acumulamos, y luego se lo pasamos al chat en el system prompt:
 
 ```ts
 export const chat_with_artifact = (data: { messages: UIMessage[] }) => {
@@ -91,18 +97,18 @@ export const chat_with_artifact = (data: { messages: UIMessage[] }) => {
         fullCode += chunk;
         writer.write({
           type: "data-custom",
-          data: { custom: chunk },
+          data: { custom: chunk },  // 👈 Va al artifact
         });
       }
 
-      // 2. Chat "artifact-aware" - conoce el código
+      // 2. Chat "artifact-aware" - SABE qué código se generó
       const chatResult = streamText({
         model,
         system: `CÓDIGO GENERADO:\n${fullCode}\n\nExplica brevemente...`,
         prompt: userPrompt,
       });
 
-      writer.merge(chatResult.toUIMessageStream());
+      writer.merge(chatResult.toUIMessageStream()); // 👈 Va al chat
     },
   });
 
@@ -110,9 +116,11 @@ export const chat_with_artifact = (data: { messages: UIMessage[] }) => {
 };
 ```
 
-### Cliente: Filtrando data-custom
+¿Ves el truco? Acumulamos `fullCode` mientras streameamos al artifact, y luego lo inyectamos en el system prompt del chat. El modelo ahora **sabe exactamente** qué código explicar. ✨
 
-En React, filtramos las partes `data-custom` para el artifact:
+## En el cliente: Filtrando los datos
+
+En React, filtramos las partes `data-custom` para el artifact y las partes `text` para el chat:
 
 ```tsx
 const artifactContent = useMemo(() => {
@@ -124,22 +132,7 @@ const artifactContent = useMemo(() => {
 }, [messages]);
 ```
 
-### DefaultChatTransport
-
-Cambiamos el endpoint del chat:
-
-```tsx
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-
-const { messages, sendMessage } = useChat({
-  transport: new DefaultChatTransport({
-    api: "/api/chat_with_artifact",
-  }),
-});
-```
-
-## Layout side-by-side
+Y el layout lado a lado:
 
 ```tsx
 <article className="flex items-stretch">
@@ -150,7 +143,7 @@ const { messages, sendMessage } = useChat({
   )}
 
   <motion.section layout id="Chat" className="flex-1">
-    {/* Mensajes de texto */}
+    {/* Solo partes de texto */}
     {messages.map((m) => (
       <div key={m.id}>
         {m.parts.map((part, i) => {
@@ -165,6 +158,21 @@ const { messages, sendMessage } = useChat({
 </article>
 ```
 
+## Cambiando el endpoint con DefaultChatTransport
+
+Para usar nuestro nuevo endpoint `/api/chat_with_artifact`, usamos `DefaultChatTransport`:
+
+```tsx
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+
+const { messages, sendMessage } = useChat({
+  transport: new DefaultChatTransport({
+    api: "/api/chat_with_artifact",
+  }),
+});
+```
+
 ## Estructura del proyecto
 
 ```
@@ -175,22 +183,8 @@ const { messages, sendMessage } = useChat({
 └── client/
     └── src/
         ├── App.tsx           # Layout artifact + chat
-        ├── components/
-        │   └── CursoCard.tsx
-        └── lib/
-            └── utils.ts      # cn() helper
-```
-
-## API Endpoints
-
-```bash
-# Chat normal con tools
-POST /api/chat
-{ "messages": [...], "sessionId": "uuid" }
-
-# Chat con artifacts
-POST /api/chat_with_artifact
-{ "messages": [...], "sessionId": "uuid" }
+        └── components/
+            └── CursoCard.tsx
 ```
 
 ## Ejecución
@@ -201,13 +195,6 @@ cd client && npm install && cd ..
 npm run dev
 ```
 
-## Resultado
-
-- **Panel izquierdo (Artifact):** Código generado en tiempo real con syntax highlighting
-- **Panel derecho (Chat):** Explicación del código que conoce lo generado
-
-El modelo genera código y luego lo explica, manteniendo contexto de lo que ya se generó.
-
 ## Lo que aprenderás
 
 1. **createUIMessageStream** - Crear streams personalizados
@@ -215,8 +202,8 @@ El modelo genera código y luego lo explica, manteniendo contexto de lo que ya s
 3. **writer.merge()** - Combinar múltiples streams
 4. **Artifact pattern** - Código en panel separado
 5. **DefaultChatTransport** - Cambiar endpoint del chat
-6. **Layout dinámico** - Motion para animaciones de layout
+6. **Layout dinámico** - Framer Motion para animaciones
 
 ---
 
-Que lo disfrutes. Abrazo. bliss
+Que lo disfrutes. Abrazo. bliss 🦾
