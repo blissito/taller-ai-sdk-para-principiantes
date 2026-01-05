@@ -146,4 +146,6 @@ npm run dev
 
 ---
 
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Que lo disfrutes. Abrazo. bliss 🦾
