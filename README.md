@@ -262,4 +262,6 @@ Para producción, considera usar una base de datos vectorial como:
 
 ---
 
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Que lo disfrutes. Abrazo. bliss 🦾
