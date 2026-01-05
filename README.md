@@ -1,66 +1,86 @@
-# Generando streams desde una inferencia básica
+# Ejercicio 00: Inferencia básica con AI SDK
 
-Pedirle algo al LLM es crear/generar/detonar una inferencia. ✅
+Este es el punto de partida del taller. Aprendemos a generar texto y datos estructurados usando el AI SDK de Vercel desde un script de Node.js.
+
+## Flujo de la aplicación
+
+```
+[Script Node.js]
+       ↓
+   streamText()
+       ↓
+   textStream
+       ↓
+   for await (part)
+       ↓
+[Consola: texto en tiempo real]
+```
+
+## Conceptos del AI SDK
+
+### streamText
+
+Genera texto en streaming (token por token):
 
 ```ts
 import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const model = openai("gpt-4.1-mini");
 
 const chat = (prompt: string) =>
   streamText({
     model,
-    system,
+    system: "Eres un asistente inteligente",
     prompt,
   });
-```
 
-Creamos la función chat para poder recibir el prompt desde fuera. 🤓
-Los streams son la manera más moderna y adoptada por la industria web para crear la mejor experiencia de chat con robots. 🤖
-
-## ¿Cómo ejecutamos este script?
-
-Vamos a ejecutar nuestro programa y recorrer el stream para devolver parte por parte a la consola.
-
-```ts
+// Consumir el stream
 const { textStream } = chat("Díme un poema robótico");
 
 for await (const part of textStream) {
-  process.stdout.write(part);
+  process.stdout.write(part); // Sin salto de línea
 }
 ```
 
-Ejecutamos el programa con: `npm run dev` que a su vez hace, simplemente: `tsx index.ts`. `tsx` es la manera más fácil de ejecutar TypeScript en Node.js. ✅
+| Función | Descripción | Retorna |
+|---------|-------------|---------|
+| `streamText` | Genera texto en streaming | `{ textStream, text, ... }` |
+| `generateText` | Genera texto completo | `{ text, ... }` |
 
-## Más allá del texto: Datos estructurados
+### generateObject
 
-El AI SDK no solo genera texto. Con `generateObject` y `streamObject` podemos obtener **datos estructurados** validados con Zod:
+Genera datos estructurados validados con Zod:
 
 ```ts
 import { generateObject } from "ai";
 import { z } from "zod";
 
+const recipeSchema = z.object({
+  recipe: z.object({
+    name: z.string(),
+    ingredients: z.array(
+      z.object({
+        name: z.string(),
+        amount: z.string(),
+      })
+    ),
+    steps: z.array(z.string()),
+  }),
+});
+
 const { object } = await generateObject({
   model,
-  schema: z.object({
-    recipe: z.object({
-      name: z.string(),
-      ingredients: z.array(
-        z.object({
-          name: z.string(),
-          amount: z.string(),
-        })
-      ),
-      steps: z.array(z.string()),
-    }),
-  }),
+  schema: recipeSchema,
   prompt: "Dame una receta de tacos al pastor",
 });
 
-console.log(object.recipe.ingredients); // ✅ Tipado y validado
+console.log(object.recipe.ingredients); // Tipado y validado
 ```
 
-### ¿Y en streaming?
+### streamObject
 
-Para UIs que muestran datos mientras se generan, usamos `streamObject`:
+Genera objetos en streaming (útil para UIs):
 
 ```ts
 import { streamObject } from "ai";
@@ -73,18 +93,57 @@ const { partialObjectStream } = streamObject({
 
 for await (const partialObject of partialObjectStream) {
   console.clear();
-  console.log(partialObject); // 👀 El objeto se va construyendo
+  console.log(partialObject); // El objeto se va construyendo
 }
 ```
 
-> 💡 **Casos de uso:** Formularios inteligentes, extracción de datos de documentos, clasificadores, analizadores de sentimiento, parseo de CVs, y más.
+| Función | Streaming | Datos estructurados | Tools |
+|---------|-----------|---------------------|-------|
+| `streamText` | Si | No | Si |
+| `generateText` | No | No | Si |
+| `streamObject` | Si | Si | No |
+| `generateObject` | No | Si | No |
 
-> ⚠️ **Nota:** `generateObject` y `streamObject` no pueden usar tools. Si necesitas tools, usa `generateText` o `streamText`.
+## Casos de uso de datos estructurados
 
-## El entorno web
+- Formularios inteligentes
+- Extracción de datos de documentos
+- Clasificadores de texto
+- Analizadores de sentimiento
+- Parseo de CVs
 
-No siempre queremos ejecutar scripts desde nuestra terminal, a veces se apetece crearnos una interfaz web, para ello usaremos el framework para crear un servidor más famoso de Node.js: express.js. ✅ Todo esto, en el siguiente ejercicio. 🧑🏻‍💻
+## Estructura del proyecto
 
-> 👀 Hoy en día es más recomendable usar Hono que es compatible con multiples runtimes no solo Node.js. Además de ser mucho más rápido y usar patterns más modernos y apegados a la programación funcional. 👍🏼 Hay una branch bonus en la que usamos un servidor Hono en vez de express. `origin/ejercicio/bonus-migrate_to_hono`. ⬅️
+```
+├── index.ts       # Script principal con ejemplos
+├── package.json   # Dependencias (ai, @ai-sdk/openai)
+└── .env           # OPENAI_API_KEY
+```
 
-Pero, si aún te sientes principiante y quieres ir más despacio, siempre puedes quedarte con express y sentirte más cómodo(a) mientras vas aprendiendo más. 😬
+## Ejecución
+
+```bash
+# Instalar dependencias
+npm install
+
+# Ejecutar script
+npm run dev  # equivale a: tsx index.ts
+```
+
+## Siguiente paso
+
+En el siguiente ejercicio crearemos un servidor Express para exponer el chat como API web.
+
+> Hay una branch bonus donde usamos Hono en vez de Express: `ejercicio/bonus-migrate_to_hono`
+
+## Lo que aprenderás
+
+1. **streamText** - Generar texto en streaming
+2. **textStream** - Consumir stream con for await
+3. **generateObject** - Datos estructurados con Zod
+4. **streamObject** - Objetos en streaming
+5. **Modelos OpenAI** - Configurar el provider
+
+---
+
+Que lo disfrutes. Abrazo. bliss
