@@ -1,8 +1,10 @@
 # Bonus: Migración a Hono
 
-Migramos el backend de Express.js a Hono para un servidor más moderno, ligero y compatible con múltiples runtimes (Node.js, Bun, Deno, Cloudflare Workers).
+Express ha sido el rey de los frameworks de Node.js por años. Pero hay un nuevo contendiente: **Hono**. 🔥
 
-## Por qué Hono
+Hono es más ligero, más rápido, y lo mejor: está diseñado para funcionar en cualquier runtime (Node.js, Bun, Deno, Cloudflare Workers). En este ejercicio migramos nuestro servidor de Express a Hono.
+
+## ¿Por qué Hono?
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -17,26 +19,24 @@ Migramos el backend de Express.js a Hono para un servidor más moderno, ligero y
 └─────────────────────┴───────────────────────────────────┘
 ```
 
-## Cambios realizados
+La diferencia más notable: en Express mutamos el objeto `res`, en Hono simplemente **retornamos** un `Response`. Es más funcional y compatible con el estándar Web. 👌
 
-| Archivo        | Cambio                                                    |
-| -------------- | --------------------------------------------------------- |
-| `package.json` | Removido `express`, `@types/express`. Agregado `hono`, `@hono/node-server` |
-| `server.ts`    | Reescrito con sintaxis Hono                               |
+## La migración es casi directa
 
-## Diferencias de sintaxis
+Si ya conoces Express, Hono te parecerá familiar:
 
-| Express                                     | Hono                                        |
-| ------------------------------------------- | ------------------------------------------- |
-| `import express from "express"`             | `import { Hono } from "hono"`               |
-| `const app = express()`                     | `const app = new Hono()`                    |
-| `req.body`                                  | `await c.req.json()`                        |
-| `res.json(data)`                            | `return c.json(data)`                       |
-| `res.status(400).json()`                    | `return c.json(data, 400)`                  |
-| `result.pipeUIMessageStreamToResponse(res)` | `return result.toUIMessageStreamResponse()` |
-| `app.listen(PORT)`                          | `serve({ fetch: app.fetch, port })`         |
+| Express | Hono |
+|---------|------|
+| `import express from "express"` | `import { Hono } from "hono"` |
+| `const app = express()` | `const app = new Hono()` |
+| `req.body` | `await c.req.json()` |
+| `res.json(data)` | `return c.json(data)` |
+| `res.status(400).json()` | `return c.json(data, 400)` |
+| `app.listen(PORT)` | `serve({ fetch: app.fetch, port })` |
 
-## Código del servidor
+La sintaxis es casi idéntica, solo que todo es async y retornamos valores en lugar de mutar.
+
+## El servidor migrado
 
 ```ts
 import { serve } from "@hono/node-server";
@@ -47,7 +47,7 @@ import { chat } from ".";
 const PORT = Number(process.env.PORT) || 3000;
 const app = new Hono();
 
-// POST /api/embed
+// POST /api/embed - Crear embeddings
 app.post("/api/embed", async (c) => {
   const { content, filename, sessionId } = await c.req.json();
 
@@ -63,7 +63,7 @@ app.post("/api/embed", async (c) => {
 app.post("/api/chat", async (c) => {
   const { messages, sessionId } = await c.req.json();
   const result = chat(messages, sessionId);
-  return result.toUIMessageStreamResponse(); // ← Hono compatible
+  return result.toUIMessageStreamResponse(); // ← La magia
 });
 
 // Servir frontend estático
@@ -74,9 +74,9 @@ serve({ fetch: app.fetch, port: PORT }, (info) => {
 });
 ```
 
-## Ventaja clave: toUIMessageStreamResponse()
+## La ventaja clave: toUIMessageStreamResponse()
 
-Con Express necesitábamos:
+Con Express necesitábamos "pipear" el stream al response:
 ```ts
 result.pipeUIMessageStreamToResponse(res); // Muta el objeto res
 ```
@@ -86,9 +86,24 @@ Con Hono simplemente retornamos:
 return result.toUIMessageStreamResponse(); // Retorna Response directamente
 ```
 
-Esto es más funcional y compatible con el estándar Web Response API.
+Esto es más limpio, más funcional, y compatible con el estándar Web Response API. El AI SDK sabe cómo trabajar con ambos. 🤝
 
-## Instalación de dependencias
+## El objeto Context (c)
+
+En Hono, cada handler recibe un objeto `c` (context) que tiene todo lo que necesitas:
+
+```ts
+app.post("/api/chat", async (c) => {
+  const body = await c.req.json();    // Leer body
+  const header = c.req.header("x-custom"); // Leer headers
+
+  return c.json({ data });  // Responder JSON
+  return c.text("ok");      // Responder texto
+  return c.html("<h1>Hi</h1>"); // Responder HTML
+});
+```
+
+## Instalación
 
 ```bash
 # Quitar Express
@@ -108,6 +123,8 @@ npm install hono @hono/node-server
 └── client/
     └── dist/          # Build del frontend (servido estáticamente)
 ```
+
+La lógica de negocio no cambia. Solo cambia cómo exponemos los endpoints. 📦
 
 ## Ejecución
 
@@ -129,4 +146,4 @@ npm run dev
 
 ---
 
-Que lo disfrutes. Abrazo. bliss
+Que lo disfrutes. Abrazo. bliss 🦾
