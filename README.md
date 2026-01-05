@@ -148,4 +148,6 @@ En el siguiente ejercicio nos encargaremos de añadir un formulario tipo chat, p
 
 ---
 
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Que lo disfrutes. Abrazo. bliss 🤓
