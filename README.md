@@ -185,4 +185,6 @@ Para [@fixtergeek](https://www.fixtergeek.com)
 
 ---
 
+📺 **[Ver el curso completo en video](https://www.fixtergeek.com/cursos/ai-sdk/viewer)**
+
 Si este material te fue útil, considera darle una estrella al repo.
