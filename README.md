@@ -1,6 +1,8 @@
 # Ejercicio 05: Tools y UI Generativa
 
-Implementamos tools que el modelo puede ejecutar y renderizamos componentes React basados en sus resultados. El modelo decide cuándo mostrar una tarjeta de curso, creando una UI generativa.
+En este ejercicio, vamos a explorar el renderizado de componentes en medio de la conversación. 🎨
+
+¿Te imaginas que el modelo no solo responda con texto, sino que decida mostrar una tarjeta visual de un curso cuando sea relevante? Eso es UI generativa: el modelo decide qué componentes renderizar. 🤯
 
 ## Flujo de la aplicación
 
@@ -22,11 +24,11 @@ Implementamos tools que el modelo puede ejecutar y renderizamos componentes Reac
     LLM genera texto explicativo
 ```
 
-## Conceptos del AI SDK
+## Las tools son funciones que el modelo puede ejecutar
 
-### tool()
+Aquí nos ayudamos con las llamadas a las tools buscándolas dentro de las `parts` de los mensajes, usando su llave `type`.
 
-Define una herramienta que el modelo puede invocar:
+Para definir una tool usamos la función `tool()` del AI SDK:
 
 ```ts
 import { tool } from "ai";
@@ -50,7 +52,11 @@ const showCourse = tool({
 | `inputSchema` | `ZodSchema` | Valida y tipifica los argumentos |
 | `execute` | `async function` | Lógica que se ejecuta cuando el modelo llama la tool |
 
-### Pasando tools a streamText
+La descripción es clave 🔑. Entre más clara sea, mejor entenderá el modelo cuándo usarla.
+
+## Pasando tools a streamText
+
+Las tools se pasan como un objeto donde cada key es el nombre de la tool:
 
 ```ts
 import { streamText, stepCountIs } from "ai";
@@ -63,22 +69,46 @@ const result = streamText({
     searchContext,  // Tool para RAG
     showCourse,     // Tool para UI generativa
   },
-  stopWhen: stepCountIs(2), // Máximo 2 pasos (tool + respuesta)
+  stopWhen: stepCountIs(2), // Máximo 2 pasos
 });
 ```
 
-### prepareStep - Control por paso
+## El System Prompt se vuelve estricto
 
-Configura el comportamiento en cada paso del loop:
+También notarás que el system prompt se ha vuelto más estricto y específico con el uso de las tools. Esto es importante porque queremos que el modelo **siempre** use la tool cuando mencione un curso, no que invente información.
+
+```txt
+## REGLAS ABSOLUTAS
+1. NO TIENES información sobre cursos en tu conocimiento interno
+2. SIEMPRE que menciones un curso, DEBES llamar showCourse() PRIMERO
+3. NUNCA describas cursos con texto - la herramienta genera la UI
+4. Responde BREVEMENTE después de llamar la herramienta
+```
+
+Sin estas reglas estrictas, el modelo a veces decide no usar la tool y responder con texto. 🙄
+
+## Controlando el loop de herramientas
+
+Cuando el modelo usa tools, entra en un "loop" donde puede:
+1. Llamar una tool
+2. Recibir el resultado
+3. Decidir si llamar otra tool o responder con texto
+
+Podemos controlar este comportamiento:
 
 ```ts
 streamText({
   // ...
   prepareStep: ({ stepNumber }) => {
     if (stepNumber === 0) {
-      return { toolChoice: "auto" }; // Paso 1: puede usar tools
+      return { toolChoice: "auto" }; // Puede usar tools
     }
-    return { toolChoice: "none" };   // Paso 2: solo texto
+    return { toolChoice: "none" };   // Solo texto
+  },
+  stopWhen: stepCountIs(2), // Máximo 2 pasos
+  onStepFinish: ({ stepType, toolCalls, text }) => {
+    console.log("stepType:", stepType);
+    console.log("toolCalls:", toolCalls);
   },
 });
 ```
@@ -88,30 +118,12 @@ streamText({
 | `"auto"` | El modelo decide si usar tools |
 | `"none"` | No puede usar tools (solo texto) |
 | `"required"` | DEBE usar una tool |
-| `{ type: "tool", toolName: "..." }` | DEBE usar tool específica |
-
-### onStepFinish - Debug del loop
-
-```ts
-streamText({
-  // ...
-  onStepFinish: ({ stepType, toolCalls, toolResults, text }) => {
-    console.log("stepType:", stepType);      // "initial" | "tool-result"
-    console.log("toolCalls:", toolCalls);    // Tools que se llamaron
-    console.log("toolResults:", toolResults); // Resultados
-    console.log("text:", text);               // Texto generado
-  },
-});
-```
 
 ## UI Generativa en el cliente
 
-### Detectando tool results en parts
-
-El AI SDK expone los resultados de tools como `parts` con tipo dinámico:
+El AI SDK expone los resultados de tools como `parts` con tipo dinámico. Cada tool tiene su propio tipo: `tool-${toolName}`.
 
 ```tsx
-// En App.tsx
 {m.parts.map((part, i) => {
   // Texto normal
   if (part.type === "text") {
@@ -133,61 +145,12 @@ El AI SDK expone los resultados de tools como `parts` con tipo dinámico:
 })}
 ```
 
-### Estados de las parts
-
 | Estado | Descripción |
 |--------|-------------|
 | `input-available` | Tool fue llamada, esperando resultado |
 | `output-available` | Tool terminó, `part.output` disponible |
 
-### Componente CursoCard
-
-```tsx
-type Curso = {
-  id: string;
-  titulo: string;
-  descripcion: string;
-  duracion: string;
-  nivel: "Principiante" | "Intermedio" | "Avanzado";
-  imagen: string;
-  precio: number | null;
-  tags: string[];
-  url: string;
-};
-
-function CursoCard({ curso }: { curso: Curso }) {
-  return (
-    <a href={curso.url} className="block border rounded-lg p-4 hover:shadow">
-      <img src={curso.imagen} alt={curso.titulo} />
-      <h3>{curso.titulo}</h3>
-      <p>{curso.descripcion}</p>
-      <span>{curso.duracion}</span>
-      <span>{curso.nivel}</span>
-      {curso.precio && <span>${curso.precio} MXN</span>}
-    </a>
-  );
-}
-```
-
-## System Prompt estricto
-
-Para que el modelo use tools consistentemente:
-
-```txt
-Eres Fixter, asistente de Fixtergeek.
-
-## Tools
-1. searchContext(query) - Busca en documentos subidos
-2. showCourse(courseId) - Muestra tarjeta visual de curso
-
-## REGLAS ABSOLUTAS
-1. NO TIENES información sobre cursos en tu conocimiento interno
-2. SIEMPRE que menciones un curso, DEBES llamar showCourse() PRIMERO
-3. NUNCA describas cursos con texto - la herramienta genera la UI
-4. Responde BREVEMENTE después de llamar la herramienta
-
-IDs: ai-sdk, gemini-cli, claude-code, react-router, motion, chatgpt-node
-```
+Fíjate cómo podemos mostrar un spinner mientras la tool ejecuta, y luego renderizar el componente cuando tenemos el resultado. ✨
 
 ## Estructura del proyecto
 
@@ -199,22 +162,8 @@ IDs: ai-sdk, gemini-cli, claude-code, react-router, motion, chatgpt-node
 └── client/
     └── src/
         ├── App.tsx           # Renderizado de tool parts
-        ├── components/
-        │   └── CursoCard.tsx # Componente de curso
-        └── data/
-            └── cursos.ts     # Tipos compartidos
-```
-
-## API Endpoints
-
-```bash
-# Chat con tools
-POST /api/chat
-{ "messages": [...], "sessionId": "uuid" }
-
-# Embeddings para searchContext (del ejercicio anterior)
-POST /api/embed
-POST /api/search
+        └── components/
+            └── CursoCard.tsx # Componente de curso
 ```
 
 ## Ejecución
@@ -227,13 +176,13 @@ npm run dev
 
 ## Lo que aprenderás
 
-1. **tool()** - Definir herramientas con Zod schemas
+1. **tool()** - Definir herramientas que el modelo puede ejecutar
 2. **UI Generativa** - Renderizar componentes desde tool results
 3. **part.type === "tool-X"** - Detectar tools en el cliente
-4. **prepareStep** - Control del loop de herramientas
+4. **prepareStep** - Control por paso del loop
 5. **stopWhen** - Limitar pasos del agente
-6. **System prompts estrictos** - Forzar uso de tools
+6. **System prompts estrictos** - Forzar uso consistente de tools
 
 ---
 
-Que lo disfrutes. Abrazo. bliss
+Que lo disfrutes. Abrazo. bliss 🦾
