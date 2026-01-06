@@ -84,11 +84,11 @@ const similarity = cosineSimilarity(vectorA, vectorB);
 // 0.10 = poco relacionado
 ```
 
-| Función | Uso | Retorna |
-|---------|-----|---------|
-| `embedMany` | Vectorizar múltiples textos | `{ embeddings: number[][] }` |
-| `embed` | Vectorizar un texto | `{ embedding: number[] }` |
-| `cosineSimilarity` | Comparar dos vectores | `number` (0 a 1) |
+| Función            | Uso                         | Retorna                      |
+| ------------------ | --------------------------- | ---------------------------- |
+| `embedMany`        | Vectorizar múltiples textos | `{ embeddings: number[][] }` |
+| `embed`            | Vectorizar un texto         | `{ embedding: number[] }`    |
+| `cosineSimilarity` | Comparar dos vectores       | `number` (0 a 1)             |
 
 ## Chunking: Dividir texto en pedazos
 
@@ -100,18 +100,18 @@ El archivo `chunking.ts` implementa varias estrategias para dividir texto:
 import { chunkText } from "./chunking";
 
 const chunks = chunkText(contenido, {
-  maxChunkSize: 500,    // Máximo caracteres por chunk
-  overlap: 50,          // Solapamiento entre chunks
+  maxChunkSize: 500, // Máximo caracteres por chunk
+  overlap: 50, // Solapamiento entre chunks
   splitBy: "paragraph", // Estrategia de división
 });
 ```
 
-| Estrategia | Descripción |
-|------------|-------------|
+| Estrategia  | Descripción                                |
+| ----------- | ------------------------------------------ |
 | `paragraph` | Divide por párrafos (doble salto de línea) |
-| `sentence` | Divide por oraciones (., !, ?) |
-| `line` | Divide por líneas |
-| `size` | Divide por tamaño fijo con overlap |
+| `sentence`  | Divide por oraciones (., !, ?)             |
+| `line`      | Divide por líneas                          |
+| `size`      | Divide por tamaño fijo con overlap         |
 
 ## En el cliente tenemos un par de funciones en App.tsx
 
@@ -137,7 +137,14 @@ const handleFileChange = useCallback(
         body: JSON.stringify({ content, filename: file.name, sessionId }),
       });
 
-      // Actualizar estado a "ready" ✅
+      const { chunksCount } = await response.json();
+
+      // Actualizar estado a "ready" con el número de chunks
+      setEmbeddedFiles((prev) =>
+        prev.map((f) =>
+          f.name === file.name ? { ...f, chunksCount, status: "ready" } : f
+        )
+      );
     }
   },
   [sessionId]
@@ -193,9 +200,7 @@ export async function findSimilarChunks(
   }));
 
   // Retornar top K más similares
-  return scored
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, topK);
+  return scored.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
 }
 ```
 
@@ -248,8 +253,11 @@ Esta es una demostración pero que **no escala bien** para producción. 😗
 - Sin deduplicación de chunks
 
 Para producción, considera usar una base de datos vectorial como:
+
 - **Pinecone** - Managed vector DB
 - **Supabase pgvector** - PostgreSQL con vectores
+- **PostgreSQL + pgvector** - Self-hosted con extensión vectorial
+- **MongoDB Atlas** - Vector search integrado
 - **ChromaDB** - Open source, local
 
 ## Lo que aprenderás
